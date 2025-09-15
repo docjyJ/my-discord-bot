@@ -1,0 +1,32 @@
+// Prisma schema pour remplacer le stockage JSON par SQLite
+// Modèles: User, StepEntry, Meta (clé-valeur pour les métadonnées + drapeau de migration)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id    String      @id
+  goal  Int         @default(0)
+  steps StepEntry[]
+}
+
+model StepEntry {
+  userId String
+  date   String // ISO date AAAA-MM-JJ
+  value  Int // milliers de pas
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, date])
+  @@index([date])
+}
+
+model Meta {
+  key   String  @id
+  value String?
+}
