@@ -6,3 +6,4 @@
 .vscode/*
 .idea/*
 src/secrets.ts
+data/
