@@ -5,39 +5,38 @@ export const commandName = 'objectif';
 
 export const data = new SlashCommandBuilder()
   .setName(commandName)
-  .setDescription('Afficher ou définir un objectif quotidien (en pas, 0 pour aucun)')
+  .setDescription("Afficher ou définir un objectif quotidien (en pas, arrondi au millier)")
   .addUserOption(o => o.setName('utilisateur')
     .setDescription('Utilisateur cible (défaut: toi)')
   )
   .addIntegerOption(o => o.setName('pas')
-    .setDescription('Nouvel objectif en pas (multiple de 1000, 0 pour enlever)')
+    .setDescription('Nouvel objectif en pas (sera arrondi au millier)')
     .setMinValue(0)
   );
 
+function roundTo1000(v: number) { return Math.round(v / 1000) * 1000; }
+
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const pas = interaction.options.getInteger('pas');
+  const pasInput = interaction.options.getInteger('pas');
   const targetUser: User = interaction.options.getUser('utilisateur') || interaction.user;
 
-  if (pas !== null) {
+  if (pasInput !== null) {
     if (targetUser.id !== interaction.user.id) {
       return interaction.reply({ content: "tu ne peux pas définir l'objectif d'un autre utilisateur", flags: MessageFlags.Ephemeral});
     }
-    if (pas < 0) {
+    if (pasInput < 0) {
       return interaction.reply({ content: 'valeur invalide: doit être >= 0.', flags: MessageFlags.Ephemeral });
     }
-    if (pas % 1000 !== 0) {
-      return interaction.reply({ content: 'valeur invalide: doit être un multiple de 1000.', flags: MessageFlags.Ephemeral });
-    }
-    const thousands = pas / 1000;
-    await setGoal(targetUser.id, thousands);
-    return interaction.reply({ content: `le nouvel objectif de <@${targetUser.id}> est ${pas} pas / jour` });
+    const arrondi = roundTo1000(pasInput);
+    await setGoal(targetUser.id, arrondi); // stockage brut
+    return interaction.reply({ content: `le nouvel objectif de <@${targetUser.id}> est d'environ ${arrondi} pas / jour (arrondi)` });
   }
 
-  const goalThousands = await getGoal(targetUser.id);
-  if (!goalThousands || goalThousands === 0) {
+  const goal = await getGoal(targetUser.id);
+  if (!goal || goal === 0) {
     return interaction.reply({ content: `<@${targetUser.id}> n'a pas d'objectif` });
   }
-  return interaction.reply({ content: `l'objectif de <@${targetUser.id}> est ${goalThousands * 1000} pas / jour` });
+  return interaction.reply({ content: `l'objectif de <@${targetUser.id}> est d'environ ${goal} pas / jour` });
 }
 
 export default { commandName, data, execute };

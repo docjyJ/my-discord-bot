@@ -16,7 +16,7 @@ export async function setGoal(userId: string, goal: number) {
   });
 }
 
-export async function recordSteps(userId: string, dateISO: string, stepsThousands: number) {
+export async function recordSteps(userId: string, dateISO: string, steps: number) {
   await prisma.user.upsert({
     where: { id: userId },
     update: {},
@@ -24,8 +24,8 @@ export async function recordSteps(userId: string, dateISO: string, stepsThousand
   });
   await prisma.stepEntry.upsert({
     where: { userId_date: { userId, date: dateISO } },
-    update: { value: stepsThousands },
-    create: { userId, date: dateISO, value: stepsThousands }
+    update: { value: steps },
+    create: { userId, date: dateISO, value: steps }
   });
 }
 

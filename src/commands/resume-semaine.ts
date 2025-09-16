@@ -20,15 +20,15 @@ function formatSummary(summary: Awaited<ReturnType<typeof getWeekSummary>>, mond
   const monday = dayjs.tz(mondayISO, 'Europe/Paris');
   const endISO = monday.add(6, 'day').format('YYYY-MM-DD');
   lines.push(`Semaine du ${mondayISO} au ${endISO}`);
-  if (summary.goal) lines.push(`Objectif quotidien: ${summary.goal * 1000} pas`);
+  if (summary.goal) lines.push(`Objectif quotidien: ≈ ${summary.goal} pas`);
   lines.push('Jours:');
   for (const d of summary.days) {
-    const val = d.value !== undefined ? (d.value * 1000).toString() : '-';
+    const val = d.value !== undefined ? `≈ ${d.value}` : '-';
     const badge = summary.goal && d.value !== undefined && d.value >= summary.goal ? '✅' : '';
     lines.push(` - ${d.date}: ${val} ${badge}`);
   }
-  lines.push(`Total: ${summary.total * 1000} pas`);
-  lines.push(`Moyenne: ${Math.round(summary.average * 1000)} pas / jour`);
+  lines.push(`Total: ≈ ${summary.total} pas`);
+  lines.push(`Moyenne: ≈ ${Math.round(summary.average / 1000) * 1000} pas / jour`);
   if (summary.goal) lines.push(`Jours objectif atteint: ${summary.successDays}/7`);
   return lines.join('\n');
 }
