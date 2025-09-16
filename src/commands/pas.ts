@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import {ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -26,7 +26,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const dateOpt = interaction.options.getString('date') || undefined;
   const date = dateOpt ? dayjs.tz(dateOpt, 'Europe/Paris') : dayjs().tz('Europe/Paris');
   if (!date.isValid()) {
-    return interaction.reply({ content: 'Date invalide. Format attendu AAAA-MM-JJ.', ephemeral: true });
+    return interaction.reply({ content: 'Date invalide. Format attendu AAAA-MM-JJ.', flags: MessageFlags.Ephemeral });
   }
   const dateISO = date.format('YYYY-MM-DD');
   const userId = interaction.user.id;
@@ -45,7 +45,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (oldValue !== undefined && oldValue !== milliers) {
     msg += ` (Mise à jour, ancien: ${oldValue * 1000})`;
   }
-  return interaction.reply({ content: msg, ephemeral: true });
+  return interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
 }
 
 export default { commandName, data, execute };
