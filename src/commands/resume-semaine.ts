@@ -1,6 +1,10 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { DateTime } from 'luxon';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import { getWeekSummary } from '../steps/storage';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export const commandName = 'resume-semaine';
 
@@ -13,7 +17,8 @@ export const data = new SlashCommandBuilder()
 
 function formatSummary(summary: Awaited<ReturnType<typeof getWeekSummary>>, mondayISO: string): string {
   const lines: string[] = [];
-  const endISO = DateTime.fromISO(mondayISO, { zone: 'Europe/Paris' }).plus({ days: 6 }).toISODate() || mondayISO;
+  const monday = dayjs.tz(mondayISO, 'Europe/Paris');
+  const endISO = monday.add(6, 'day').format('YYYY-MM-DD');
   lines.push(`Semaine du ${mondayISO} au ${endISO}`);
   if (summary.goal) lines.push(`Objectif quotidien: ${summary.goal * 1000} pas`);
   lines.push('Jours:');
@@ -31,17 +36,17 @@ function formatSummary(summary: Awaited<ReturnType<typeof getWeekSummary>>, mond
 export async function execute(interaction: ChatInputCommandInteraction) {
   const lundiOpt = interaction.options.getString('lundi') || undefined;
   const zone = 'Europe/Paris';
-  let monday: DateTime;
+  let monday;
   if (lundiOpt) {
-    monday = DateTime.fromISO(lundiOpt, { zone });
-    if (!monday.isValid) {
+    monday = dayjs.tz(lundiOpt, zone);
+    if (!monday.isValid()) {
       return interaction.reply({ content: 'Date du lundi invalide.', ephemeral: true });
     }
   } else {
-    const now = DateTime.now().setZone(zone);
-    monday = now.minus({ days: now.weekday - 1 }).startOf('day');
+    const now = dayjs.tz(zone);
+    monday = now.subtract(now.day() - 1, 'day').startOf('day');
   }
-  const mondayISO = monday.toISODate() || monday.toFormat('yyyy-MM-dd');
+  const mondayISO = monday.format('YYYY-MM-DD');
   const summary = await getWeekSummary(interaction.user.id, mondayISO);
   const txt = formatSummary(summary, mondayISO);
   return interaction.reply({ content: '```\n' + txt + '\n```', ephemeral: true });

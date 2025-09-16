@@ -18,8 +18,8 @@ model User {
 
 model StepEntry {
   userId String
-  date   String // ISO date AAAA-MM-JJ
-  value  Int // milliers de pas
+  date   String
+  value  Int
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, date])

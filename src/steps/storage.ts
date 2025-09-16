@@ -1,9 +1,13 @@
 import { PrismaClient } from '@prisma/client';
-import {DateTime} from "luxon";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const prisma = new PrismaClient();
 
-// API directe sans migration JSON
 export async function setGoal(userId: string, goal: number) {
   await prisma.user.upsert({
     where: { id: userId },
@@ -49,14 +53,14 @@ export type WeekSummary = {
 };
 
 export async function getWeekSummary(userId: string, mondayISO: string): Promise<WeekSummary> {
-  const monday = DateTime.fromISO(mondayISO, { zone: 'Europe/Paris' });
+  const monday = dayjs(mondayISO).tz('Europe/Paris');
   const dates: string[] = [];
   for (let i = 0; i < 7; i++) {
-    dates.push((monday.plus({ days: i }).toISODate())!);
+    dates.push(monday.add(i, 'day').format('YYYY-MM-DD'));
   }
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { goal: true } });
   const entries = await prisma.stepEntry.findMany({ where: { userId, date: { in: dates } }, select: { date: true, value: true } });
-  const map = new Map(entries.map(e => [e.date, e.value]));
+  const map = new Map<string, number>(entries.map(e => [typeof e.date === 'string' ? e.date : dayjs(e.date).format('YYYY-MM-DD'), e.value]));
   let total = 0; let successDays = 0;
   const days = dates.map(date => {
     const value = map.get(date);

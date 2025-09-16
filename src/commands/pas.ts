@@ -1,6 +1,11 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { DateTime } from 'luxon';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import { recordSteps, getGoal, getEntry } from '../steps/storage';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export const commandName = 'pas';
 
@@ -19,11 +24,11 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
   const milliers = interaction.options.getInteger('milliers', true); // requis
   const dateOpt = interaction.options.getString('date') || undefined;
-  const date = dateOpt ? DateTime.fromISO(dateOpt, { zone: 'Europe/Paris' }) : DateTime.now().setZone('Europe/Paris');
-  if (!date.isValid) {
+  const date = dateOpt ? dayjs.tz(dateOpt, 'Europe/Paris') : dayjs().tz('Europe/Paris');
+  if (!date.isValid()) {
     return interaction.reply({ content: 'Date invalide. Format attendu AAAA-MM-JJ.', ephemeral: true });
   }
-  const dateISO = date.toISODate() || date.toFormat('yyyy-MM-dd');
+  const dateISO = date.format('YYYY-MM-DD');
   const userId = interaction.user.id;
 
   const oldValue = await getEntry(userId, dateISO);

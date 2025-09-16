@@ -13,12 +13,11 @@
   },
   "dependencies": {
     "@prisma/client": "^6.16.1",
+    "dayjs": "^1.11.18",
     "discord.js": "^14.22.1",
-    "luxon": "^3.7.2",
     "prisma": "^6.16.1"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.1",
     "@types/node": "^20.19.14",
     "tsup": "^8.5.0",
     "tsx": "^4.20.5",

@@ -3,7 +3,11 @@ import {guildId, token} from "./secrets";
 import {commandsExecutors} from "./commands";
 import { deployCommands } from "./deploy-commands";
 import { listUsers, getGoal, shouldSendDailyPrompt, markDailyPrompt, shouldSendWeeklySummary, markWeeklySummary, getWeekSummary } from './steps/storage';
-import {DateTime} from "luxon";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const client = new Client({
 	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages]
@@ -31,11 +35,11 @@ function startScheduler() {
 	setInterval(async () => {
 		try {
 			const zone = 'Europe/Paris';
-			const now = DateTime.now().setZone(zone);
-			const dateISO = now.toISODate() || now.toFormat('yyyy-MM-dd');
+			const now = dayjs().tz(zone);
+			const dateISO = now.format('YYYY-MM-DD');
 
 			// Rappel quotidien (si >= 19:00 et pas encore envoyé)
-			if (now.hour >= 19) {
+			if (now.hour() >= 19) {
 				if (await shouldSendDailyPrompt(dateISO)) {
 					await sendDailyPrompts(dateISO, now);
 					await markDailyPrompt(dateISO);
@@ -43,11 +47,11 @@ function startScheduler() {
 			}
 
 			// Résumé hebdo : lundi 08:00 (ou plus tard si bot démarre après)
-			if (now.weekday === 1 && now.hour >= 8) { // 1 = lundi
-				const mondayCurrentWeek = now.minus({ days: 0 }).startOf('day');
+			if (now.day() === 1 && now.hour() >= 8) { // 1 = lundi
+				const mondayCurrentWeek = now.startOf('day');
 				// On veut résumer la semaine complète précédente (lundi -> dimanche)
-				const mondayPrev = mondayCurrentWeek.minus({ days: 7 });
-				const mondayPrevISO = mondayPrev.toISODate() || mondayPrev.toFormat('yyyy-MM-dd');
+				const mondayPrev = mondayCurrentWeek.subtract(7, 'day');
+				const mondayPrevISO = mondayPrev.format('YYYY-MM-DD');
 				if (await shouldSendWeeklySummary(mondayPrevISO)) {
 					await sendWeeklySummaries(mondayPrevISO);
 					await markWeeklySummary(mondayPrevISO);
@@ -59,14 +63,14 @@ function startScheduler() {
 	}, 60 * 1000);
 }
 
-async function sendDailyPrompts(dateISO: string, now: DateTime) {
+async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
 	const users = await listUsers();
 	for (const userId of users) {
 		try {
 			const goal = await getGoal(userId);
 			if (!goal || goal === 0) continue; // seulement si objectif défini
 			const user = await client.users.fetch(userId);
-			await user.send(`Salut ! Il est ${now.toFormat('HH:mm')} Europe/Paris. Combien de milliers de pas aujourd'hui (${dateISO}) ? Utilise la commande /pas dans le serveur: /pas milliers:<n>. Objectif: ${goal * 1000} pas.`);
+			await user.send(`Salut ! Il est ${now.format('HH:mm')} Europe/Paris. Combien de milliers de pas aujourd'hui (${dateISO}) ? Utilise la commande /pas dans le serveur: /pas milliers:<n>. Objectif: ${goal * 1000} pas.`);
 		} catch (e) {
 			console.warn('Impossible d\'envoyer le DM à', userId, e);
 		}
@@ -81,7 +85,7 @@ async function sendWeeklySummaries(mondayISO: string) {
 			if ((summary.goal ?? 0) === 0 && summary.total === 0) continue; // rien à dire
 			const user = await client.users.fetch(userId);
 			const lines: string[] = [];
-			lines.push(`Résumé semaine du ${mondayISO} au ${DateTime.fromISO(mondayISO, { zone: 'Europe/Paris' }).plus({ days: 6 }).toISODate()}`);
+			lines.push(`Résumé semaine du ${mondayISO} au ${dayjs(mondayISO).add(6, 'day').format('YYYY-MM-DD')}`);
 			if (summary.goal) lines.push(`Objectif quotidien: ${summary.goal * 1000} pas`);
 			for (const d of summary.days) {
 				const val = d.value !== undefined ? (d.value * 1000).toString() : '-';
