@@ -12,7 +12,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import {getEntry, getGoal, setEntry} from '../steps/storage';
-import { saisir } from '../lang';
+import {saisir} from '../lang';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -46,7 +46,7 @@ export async function getModale(date: string, userId?: string) {
 		.setRequired(false);
 
 	if (userId) {
-		const { steps: existing } = await getEntry(userId, date);
+		const {steps: existing} = await getEntry(userId, date);
 		if (existing !== undefined && existing !== null) {
 			pasInput.setValue(String(existing));
 		}
@@ -69,21 +69,20 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 	}
 
 	const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
-	const userId = interaction.user.id;
+	const {steps} = await getEntry(interaction.user.id, dateISO);
 
 	if (rawStr === '') {
-		const {steps: oldValue} = await getEntry(userId, dateISO);
-		await setEntry(userId, dateISO, {steps: null});
-		if (oldValue === null) {
+		if (steps === null) {
 			return interaction.reply({
-				content: saisir.replyAction.noEntryToDelete(dateISO),
+				content: saisir.replyAction.noChange(dateISO),
 				flags: MessageFlags.Ephemeral
 			});
-		} else {
-			return interaction.reply({
-				content: saisir.replyAction.entryDeleted(userId, dateISO, oldValue),
-			});
 		}
+		await setEntry(interaction.user.id, dateISO, {steps: null});
+		return interaction.reply({
+			content: saisir.replyAction.entryDeleted(interaction.user.id, dateISO),
+		});
+
 	}
 
 	const raw = parseInt(rawStr, 10);
@@ -91,23 +90,25 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 		return interaction.reply({content: saisir.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
 	}
 
-	const {steps: oldValue} = await getEntry(userId, dateISO);
-	await setEntry(userId, dateISO, {steps: raw});
-	const {stepsGoal} = await getGoal(userId); // en pas bruts
-	let msg = saisir.replyAction.saved(raw, dateISO);
-	if (stepsGoal && stepsGoal > 0) {
-		if (raw >= stepsGoal) {
-			msg += saisir.replyAction.goalReached(stepsGoal);
-		} else {
-			const reste = stepsGoal - raw;
-			const resteApprox = Math.round(reste / 1000) * 1000;
-			msg += saisir.replyAction.goalRemaining(stepsGoal, resteApprox);
-		}
+	if (steps === raw) {
+		return interaction.reply({
+			content: saisir.replyAction.noChange(dateISO),
+			flags: MessageFlags.Ephemeral
+		});
 	}
-	if (oldValue !== null && oldValue !== stepsGoal) {
-		msg += saisir.replyAction.previousValue(oldValue as number);
+
+	const {stepsGoal} = await getGoal(interaction.user.id);
+	await setEntry(interaction.user.id, dateISO, {steps: raw});
+
+	if (stepsGoal === null) {
+		return interaction.reply({content: saisir.replyAction.saved(interaction.user.id, dateISO, raw)});
 	}
-	return interaction.reply({content: msg, flags: MessageFlags.Ephemeral});
+
+	if (raw < stepsGoal) {
+		return interaction.reply({content: saisir.replyAction.savedRemaining(interaction.user.id, dateISO, stepsGoal, raw, stepsGoal - raw)});
+	}
+	return interaction.reply({content: saisir.replyAction.savedReached(interaction.user.id, dateISO, stepsGoal, raw)});
+
 }
 
 export default {commandName, data, execute};

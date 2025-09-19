@@ -34,6 +34,7 @@ export const objectif = {
 	},
 	replyAction: {
 		noGoal: (userId: string) => `<@${userId}> a supprimé son objectif.`,
+		noChange: 'Tu n\'as pas changé ton objectif.',
 		goal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${goal} pas par jour.`,
 		invalidValue: 'valeur invalide: doit être un entier >= 0.',
 	},
@@ -62,13 +63,12 @@ export const saisir = {
 	},
 	replyAction: {
 		invalidDate: 'Date invalide. Format attendu AAAA-MM-JJ.',
-		noEntryToDelete: (dateISO: string) => `Aucune saisie pour ${dateISO} — rien à supprimer.`,
-		entryDeleted: (userId: string, dateISO: string, oldValue: number) => `<@${userId}> a supprimé la saisie du ${dateISO} (ancien: ${oldValue} pas).`,
+		entryDeleted: (userId: string, dateISO: string) => `<@${userId}> a supprimé sa saisie pour ${dateISO}.`,
+		noChange: (dateISO: string) => `Tu n'a pas changé ta saisie pour le ${dateISO}.`,
 		invalidValue: 'Valeur invalide: entrer un entier >= 0.',
-		saved: (value: number, dateISO: string) => `Enregistré: ${value} pas pour ${dateISO} (arrondi à la centaine inférieure).`,
-		goalReached: (stepsGoal: number) => ` Objectif (~${stepsGoal} pas) atteint ✅.`,
-		goalRemaining: (stepsGoal: number, resteApprox: number) => ` Objectif ${stepsGoal} pas (reste ${resteApprox}).`,
-		previousValue: (oldValue: number) => ` (Ancien:  ${oldValue} pas)`,
+		saved: (userId: string, dateISO: string, step: number) => `<@${userId}> a fait ${step} pas le ${dateISO}. Félicitations !`,
+		savedReached: (userId: string, dateISO: string, objective:number, step: number) => `<@${userId}> a fait ${step} pas le ${dateISO}, Tu as atteint ton objectif de ${objective} pas, félicitations !`,
+		savedRemaining: (userId: string, dateISO: string, objective:number, step: number, missing: number) => `<@${userId}> a fait ${step} pas le ${dateISO}. Il te manque ${missing} pas pour atteindre ton objectif de ${objective} pas. Allez, tu peux le faire !`,
 	},
 };
 

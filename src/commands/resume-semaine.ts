@@ -16,7 +16,7 @@ export const data = new SlashCommandBuilder()
     .setDescription(resumeLang.command.optionLundiDescription)
   );
 
-function bar(value: number | undefined, max: number, width = 12): string {
+function bar(value: number | undefined, max: number, width = 32): string {
   if (!value || max <= 0) return ' '.repeat(width);
   const filled = Math.max(0, Math.min(width, Math.round((value / max) * width)));
   return '█'.repeat(filled) + '░'.repeat(width - filled);

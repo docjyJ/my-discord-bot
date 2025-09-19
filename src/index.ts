@@ -79,7 +79,7 @@ async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
     const {stepsGoal} = await getGoal(userId);
     if (!stepsGoal || stepsGoal === 0) continue; // ignorer sans objectif
     const {steps} = await getEntry(userId, dateISO);
-    if (steps === undefined) notFilled.push(userId);
+    if (steps === null) notFilled.push(userId);
   }
   if (notFilled.length === 0) return;
   const channelFetched = await client.channels.fetch(channelId);
