@@ -43,13 +43,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return interaction.reply({ content: 'Date du lundi invalide.', ephemeral: true });
     }
   } else {
-    const now = dayjs.tz(zone);
+    const now = dayjs().tz(zone);
     monday = now.subtract(now.day() - 1, 'day').startOf('day');
   }
   const mondayISO = monday.format('YYYY-MM-DD');
   const summary = await getWeekSummary(interaction.user.id, mondayISO);
   const txt = formatSummary(summary, mondayISO);
-  return interaction.reply({ content: '```\n' + txt + '\n```', ephemeral: true });
+  return interaction.reply({ content: '```\n' + txt + '\n```' });
 }
 
 export default { commandName, data, execute };

@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel } from 'discord.js';
+import { Client, Events, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel } from 'discord.js';
 import {channelId, guildId, token} from './secrets';
 import { commandsExecutors } from './commands';
 import { deployCommands } from './deploy-commands';
@@ -97,13 +97,19 @@ async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
 }
 
 async function sendWeeklySummaries(mondayISO: string) {
+  const channelFetched = await client.channels.fetch(channelId);
+  if (!channelFetched || !channelFetched.isTextBased()) return;
+  const textChannel = channelFetched as TextChannel;
+
   const users = await listUsers();
   for (const userId of users) {
     try {
       const summary = await getWeekSummary(userId, mondayISO);
       if ((summary.goal ?? 0) === 0 && summary.total === 0) continue;
-      const user = await client.users.fetch(userId);
+
       const lines: string[] = [];
+      lines.push(`<@${userId}>`);
+      lines.push('```');
       lines.push(`Résumé semaine du ${mondayISO} au ${dayjs(mondayISO).add(6, 'day').format('YYYY-MM-DD')}`);
       if (summary.goal) lines.push(`Objectif quotidien: ≈ ${summary.goal} pas`);
       for (const d of summary.days) {
@@ -114,9 +120,11 @@ async function sendWeeklySummaries(mondayISO: string) {
       lines.push(`Total: ≈ ${summary.total} pas`);
       lines.push(`Moyenne: ≈ ${Math.round(summary.average / 1000) * 1000} pas/jour`);
       if (summary.goal) lines.push(`Jours objectif atteint: ${summary.successDays}/7`);
-      await user.send('```\n' + lines.join('\n') + '\n```');
+      lines.push('```');
+
+      await textChannel.send({ content: lines.join('\n') });
     } catch (e) {
-      console.warn('Impossible d\'envoyer le résumé à', userId, e);
+      console.warn('Impossible d\'envoyer le résumé pour', userId, e);
     }
   }
 }
