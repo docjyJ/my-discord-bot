@@ -91,5 +91,3 @@ export const resumeSemaine = {
 		invalidMonday: 'Date du lundi invalide.',
 	}
 };
-
-export default lang;
