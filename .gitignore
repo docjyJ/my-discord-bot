@@ -5,6 +5,6 @@
 
 .vscode/*
 .idea/*
-src/secrets.ts
+.env
 data/
 dev.db

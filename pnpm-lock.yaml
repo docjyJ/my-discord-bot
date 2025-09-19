@@ -17,6 +17,9 @@ importers:
       discord.js:
         specifier: ^14.22.1
         version: 14.22.1
+      dotenv:
+        specifier: ^17.2.2
+        version: 17.2.2
       prisma:
         specifier: ^6.16.1
         version: 6.16.1(typescript@5.9.2)
@@ -515,6 +518,10 @@ packages:
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
+
+  dotenv@17.2.2:
+    resolution: {integrity: sha512-Sf2LSQP+bOlhKWWyhFsn0UsfdK/kCWRv1iuA2gXAwt3dyNabr6QSj00I2V10pidqz69soatm9ZwZvpQMTIOd5Q==}
     engines: {node: '>=12'}
 
   eastasianwidth@0.2.0:
@@ -1266,6 +1273,8 @@ snapshots:
       - utf-8-validate
 
   dotenv@16.6.1: {}
+
+  dotenv@17.2.2: {}
 
   eastasianwidth@0.2.0: {}
 
