@@ -79,7 +79,7 @@ export const resumeSemaine = {
 	},
 	text: {
 		header: (mondayISO: string, endISO: string) => `Semaine ${mondayISO} → ${endISO}`,
-		goalLine: (goal: number) => `Objectif: ≈ ${goal} pas/jour`,
+		goalLine: (goal: number) => `Objectif: = ${goal} pas/jour`,
 	},
 	embed: {
 		title: 'Résumé hebdomadaire',

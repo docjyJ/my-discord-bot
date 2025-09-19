@@ -40,15 +40,15 @@ export function buildWeekMessage(userId: string | null, summary: WeekSummary, mo
     chartLines.push(`${badge} ${d.date} | ${bar(d.value, maxVal)} | ${vStr}`);
   }
 
-  const avgRounded = Math.round(summary.average / 1000) * 1000;
+  const avgRounded = Math.round(summary.average);
   const desc = '```\n' + chartLines.join('\n') + '\n```';
 
   const embed = new EmbedBuilder()
     .setTitle(resumeLang.embed.title)
     .setDescription(desc)
     .addFields(
-      { name: resumeLang.embed.fieldTotal, value: `≈ ${summary.total} pas`, inline: true },
-      { name: resumeLang.embed.fieldAverage, value: `≈ ${avgRounded} pas/jour`, inline: true },
+      { name: resumeLang.embed.fieldTotal, value: `=< ${summary.total} pas`, inline: true },
+      { name: resumeLang.embed.fieldAverage, value: `= ${avgRounded} pas/jour`, inline: true },
       ...(summary.goal ? [{ name: resumeLang.embed.fieldGoalReached, value: `${summary.successDays}/7`, inline: true }] : [])
     )
     .setColor(0x2ecc71);
