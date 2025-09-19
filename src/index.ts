@@ -9,6 +9,7 @@ import timezone from 'dayjs/plugin/timezone';
 import {handleModalSubmit as saisirHandleModalSubmit, getModale as saisirGetModale} from './commands/saisir';
 import {handleModalSubmit as objectifHandleModalSubmit} from './commands/objectif';
 import { buildWeekMessage } from './commands/resume-semaine';
+import { lang, saisir as saisirLang } from './lang';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -18,7 +19,7 @@ const client = new Client({
 });
 
 client.once(Events.ClientReady, async () => {
-  console.log('Discord bot is ready! 🤖');
+  console.log(lang.scheduler.ready);
   startScheduler();
   await deployCommands(guildId);
 });
@@ -28,8 +29,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const executor = commandsExecutors[interaction.commandName];
     if (executor) await executor(interaction);
   } else if (interaction.isButton()) {
-    if (interaction.customId.startsWith('saisir-btn-')) {
-      const dateISO = interaction.customId.substring('saisir-btn-'.length);
+    if (interaction.customId.startsWith(saisirLang.ids.buttonPrefix)) {
+      const dateISO = interaction.customId.substring(saisirLang.ids.buttonPrefix.length);
       const modal = await saisirGetModale(dateISO, interaction.user.id);
       await interaction.showModal(modal);
     }
@@ -41,7 +42,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 function startScheduler() {
   setInterval(async () => {
-		console.log('Scheduler tick', new Date().toISOString());
+		console.log(lang.scheduler.schedulerTick, new Date().toISOString());
     try {
       const zone = 'Europe/Paris';
       const now = dayjs().tz(zone);
@@ -64,14 +65,14 @@ function startScheduler() {
         }
       }
     } catch (e) {
-      console.error('Scheduler error', e);
+      console.error(lang.scheduler.schedulerError, e);
     }
-		console.log('Fin du tick');
+		console.log(lang.scheduler.schedulerEndTick);
   }, 60 * 1000);
 }
 
 async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
-	console.log('Envoi des rappels pour', dateISO);
+	console.log(lang.scheduler.sendingRemindersFor, dateISO);
   const users = await listUsers();
   const notFilled: string[] = [];
   for (const userId of users) {
@@ -82,17 +83,17 @@ async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
   }
   if (notFilled.length === 0) return;
   const channelFetched = await client.channels.fetch(channelId);
-	console.log('Canal de rappel:', channelFetched?.id);
+	console.log(lang.scheduler.reminderChannel, channelFetched?.id);
   if (!channelFetched || !channelFetched.isTextBased()) return;
   const textChannel = channelFetched as TextChannel;
   const mentions = notFilled.map(id => `<@${id}>`).join(' ');
   await textChannel.send({
-    content: `Il est ${now.format('HH:mm')} Europe/Paris. ${mentions}\nVous n'avez pas encore saisi vos pas du ${dateISO}. Cliquez sur le bouton ci-dessous pour enregistrer.`,
+    content: lang.scheduler.dailyPromptMessage(now.format('HH:mm'), mentions, dateISO),
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`saisir-btn-${dateISO}`)
-          .setLabel('Saisir ma journée')
+          .setCustomId(`${saisirLang.ids.buttonPrefix}${dateISO}`)
+          .setLabel(saisirLang.button.label)
           .setStyle(ButtonStyle.Primary)
       )
     ]
@@ -113,9 +114,9 @@ async function sendWeeklySummaries(mondayISO: string) {
       const message = buildWeekMessage(userId, summary, mondayISO);
       await textChannel.send(message);
     } catch (e) {
-      console.warn('Impossible d\'envoyer le résumé pour', userId, e);
+      console.warn(lang.scheduler.weeklySummarySendError, userId, e);
     }
   }
 }
 
-client.login(token).then(() => console.log('Connecté'));
+client.login(token).then(() => console.log(lang.scheduler.connected));

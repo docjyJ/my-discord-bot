@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { getWeekSummary, WeekSummary } from '../steps/storage';
+import { resumeSemaine as resumeLang } from '../lang';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -10,9 +11,9 @@ export const commandName = 'resume-semaine';
 
 export const data = new SlashCommandBuilder()
   .setName(commandName)
-  .setDescription('Afficher un résumé de la semaine (lundi->dimanche)')
+  .setDescription(resumeLang.command.description)
   .addStringOption(o => o.setName('lundi')
-    .setDescription('Date du lundi (AAAA-MM-JJ) de la semaine à résumer (optionnel)')
+    .setDescription(resumeLang.command.optionLundiDescription)
   );
 
 function bar(value: number | undefined, max: number, width = 12): string {
@@ -30,8 +31,8 @@ export function buildWeekMessage(userId: string | null, summary: WeekSummary, mo
   ) || 1;
 
   const chartLines: string[] = [];
-  chartLines.push(`Semaine ${mondayISO} → ${endISO}`);
-  if (summary.goal) chartLines.push(`Objectif: ≈ ${summary.goal} pas/jour`);
+  chartLines.push(resumeLang.text.header(mondayISO, endISO));
+  if (summary.goal) chartLines.push(resumeLang.text.goalLine(summary.goal));
   chartLines.push('');
   for (const d of summary.days) {
     const badge = summary.goal && d.value !== undefined && d.value >= summary.goal ? '✅' : '  ';
@@ -43,12 +44,12 @@ export function buildWeekMessage(userId: string | null, summary: WeekSummary, mo
   const desc = '```\n' + chartLines.join('\n') + '\n```';
 
   const embed = new EmbedBuilder()
-    .setTitle('Résumé hebdomadaire')
+    .setTitle(resumeLang.embed.title)
     .setDescription(desc)
     .addFields(
-      { name: 'Total', value: `≈ ${summary.total} pas`, inline: true },
-      { name: 'Moyenne', value: `≈ ${avgRounded} pas/jour`, inline: true },
-      ...(summary.goal ? [{ name: 'Objectif atteint', value: `${summary.successDays}/7`, inline: true }] : [])
+      { name: resumeLang.embed.fieldTotal, value: `≈ ${summary.total} pas`, inline: true },
+      { name: resumeLang.embed.fieldAverage, value: `≈ ${avgRounded} pas/jour`, inline: true },
+      ...(summary.goal ? [{ name: resumeLang.embed.fieldGoalReached, value: `${summary.successDays}/7`, inline: true }] : [])
     )
     .setColor(0x2ecc71);
 
@@ -65,7 +66,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (lundiOpt) {
     monday = dayjs.tz(lundiOpt, zone);
     if (!monday.isValid()) {
-      return interaction.reply({ content: 'Date du lundi invalide.', ephemeral: true });
+      return interaction.reply({ content: resumeLang.replyAction.invalidMonday, ephemeral: true });
     }
   } else {
     const now = dayjs().tz(zone);

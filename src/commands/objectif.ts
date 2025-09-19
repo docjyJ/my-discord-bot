@@ -10,14 +10,15 @@ import {
 	User
 } from 'discord.js';
 import {getGoal, setGoal} from '../steps/storage';
+import { objectif } from '../lang';
 
 export const commandName = 'objectif';
 
 export const data = new SlashCommandBuilder()
 	.setName(commandName)
-	.setDescription("Afficher ou définir un objectif quotidien (en pas, arrondi au millier)")
+	.setDescription(objectif.command.description)
 	.addUserOption(o => o.setName('utilisateur')
-		.setDescription('Utilisateur cible (défaut: toi)')
+		.setDescription(objectif.command.optionUtilisateurDescription)
 	);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -27,9 +28,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	if (utilisateurOpt) {
 		const {stepsGoal} = await getGoal(targetUser.id);
 		if (stepsGoal === null) {
-			return interaction.reply({content: `<@${targetUser.id}> n'a pas d'objectif`});
+			return interaction.reply({content: objectif.replySelect.noGoal(targetUser.id)});
 		}
-		return interaction.reply({content: `l'objectif de <@${targetUser.id}> est de ${stepsGoal} pas / jour`});
+		return interaction.reply({content: objectif.replySelect.goal(targetUser.id, stepsGoal)});
 	}
 
 	const modal = await getModale(interaction.user.id);
@@ -39,13 +40,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 export async function getModale(userId: string) {
 	const {stepsGoal: current} = await getGoal(userId);
 	const modal = new ModalBuilder()
-		.setCustomId('objectif-modal')
-		.setTitle('Définir mes objectifs journaliers');
+		.setCustomId(objectif.ids.modalId)
+		.setTitle(objectif.modal.title);
 
 	const input = new TextInputBuilder()
 		.setCustomId('pas')
-		.setLabel('Objectif de pas par jour')
-		.setPlaceholder('8000')
+		.setLabel(objectif.modal.stepLabel)
+		.setPlaceholder(objectif.modal.stepPlaceholder)
 		.setStyle(TextInputStyle.Short)
 		.setRequired(false);
 
@@ -59,23 +60,23 @@ export async function getModale(userId: string) {
 }
 
 export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
-	if (interaction.customId !== 'objectif-modal') return;
+	if (interaction.customId !== objectif.ids.modalId) return;
 	const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
 
 	if (rawStr === '') {
 		await setGoal(interaction.user.id, {stepsGoal: null});
 		return interaction.reply({
-			content: `l'objectif de <@${interaction.user.id}> a été supprimé`,
+			content: objectif.replyAction.noGoal(interaction.user.id),
 		});
 	}
 
 	const raw = parseInt(rawStr, 10);
 	if (isNaN(raw) || raw < 0) {
-		return interaction.reply({content: 'valeur invalide: doit être un entier >= 0.', flags: MessageFlags.Ephemeral});
+		return interaction.reply({content: objectif.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
 	}
 	await setGoal(interaction.user.id, {stepsGoal: raw});
 	return interaction.reply({
-		content: `le nouvel objectif de <@${interaction.user.id}> est de ${raw} pas par jour`
+		content: objectif.replyAction.goal(interaction.user.id, raw)
 	});
 }
 
