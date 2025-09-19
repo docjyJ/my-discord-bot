@@ -1,8 +1,8 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { getWeekSummary } from '../steps/storage';
+import { getWeekSummary, WeekSummary } from '../steps/storage';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -15,22 +15,47 @@ export const data = new SlashCommandBuilder()
     .setDescription('Date du lundi (AAAA-MM-JJ) de la semaine à résumer (optionnel)')
   );
 
-function formatSummary(summary: Awaited<ReturnType<typeof getWeekSummary>>, mondayISO: string): string {
-  const lines: string[] = [];
+function bar(value: number | undefined, max: number, width = 12): string {
+  if (!value || max <= 0) return ' '.repeat(width);
+  const filled = Math.max(0, Math.min(width, Math.round((value / max) * width)));
+  return '█'.repeat(filled) + '░'.repeat(width - filled);
+}
+
+export function buildWeekMessage(userId: string | null, summary: WeekSummary, mondayISO: string) {
   const monday = dayjs.tz(mondayISO, 'Europe/Paris');
   const endISO = monday.add(6, 'day').format('YYYY-MM-DD');
-  lines.push(`Semaine du ${mondayISO} au ${endISO}`);
-  if (summary.goal) lines.push(`Objectif quotidien: ≈ ${summary.goal} pas`);
-  lines.push('Jours:');
+  const maxVal = Math.max(
+    summary.goal || 0,
+    ...summary.days.map(d => d.value || 0)
+  ) || 1;
+
+  const chartLines: string[] = [];
+  chartLines.push(`Semaine ${mondayISO} → ${endISO}`);
+  if (summary.goal) chartLines.push(`Objectif: ≈ ${summary.goal} pas/jour`);
+  chartLines.push('');
   for (const d of summary.days) {
-    const val = d.value !== undefined ? `≈ ${d.value}` : '-';
-    const badge = summary.goal && d.value !== undefined && d.value >= summary.goal ? '✅' : '';
-    lines.push(` - ${d.date}: ${val} ${badge}`);
+    const badge = summary.goal && d.value !== undefined && d.value >= summary.goal ? '✅' : '  ';
+    const vStr = d.value !== undefined ? `${d.value}` : '-';
+    chartLines.push(`${badge} ${d.date} | ${bar(d.value, maxVal)} | ${vStr}`);
   }
-  lines.push(`Total: ≈ ${summary.total} pas`);
-  lines.push(`Moyenne: ≈ ${Math.round(summary.average / 1000) * 1000} pas / jour`);
-  if (summary.goal) lines.push(`Jours objectif atteint: ${summary.successDays}/7`);
-  return lines.join('\n');
+
+  const avgRounded = Math.round(summary.average / 1000) * 1000;
+  const desc = '```\n' + chartLines.join('\n') + '\n```';
+
+  const embed = new EmbedBuilder()
+    .setTitle('Résumé hebdomadaire')
+    .setDescription(desc)
+    .addFields(
+      { name: 'Total', value: `≈ ${summary.total} pas`, inline: true },
+      { name: 'Moyenne', value: `≈ ${avgRounded} pas/jour`, inline: true },
+      ...(summary.goal ? [{ name: 'Objectif atteint', value: `${summary.successDays}/7`, inline: true }] : [])
+    )
+    .setColor(0x2ecc71);
+
+  return {
+    content: userId ? `<@${userId}>` : undefined,
+    embeds: [embed]
+  };
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -48,8 +73,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
   const mondayISO = monday.format('YYYY-MM-DD');
   const summary = await getWeekSummary(interaction.user.id, mondayISO);
-  const txt = formatSummary(summary, mondayISO);
-  return interaction.reply({ content: '```\n' + txt + '\n```' });
+  const message = buildWeekMessage(null, summary, mondayISO);
+  return interaction.reply(message);
 }
 
 export default { commandName, data, execute };

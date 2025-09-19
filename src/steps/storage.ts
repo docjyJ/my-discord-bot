@@ -29,6 +29,10 @@ export async function recordSteps(userId: string, dateISO: string, steps: number
   });
 }
 
+export async function removeEntry(userId: string, dateISO: string) {
+  await prisma.stepEntry.deleteMany({ where: { userId, date: dateISO } });
+}
+
 export async function getGoal(userId: string): Promise<number | undefined> {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { goal: true } });
   return u?.goal;
@@ -60,7 +64,7 @@ export async function getWeekSummary(userId: string, mondayISO: string): Promise
   }
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { goal: true } });
   const entries = await prisma.stepEntry.findMany({ where: { userId, date: { in: dates } }, select: { date: true, value: true } });
-  const map = new Map<string, number>(entries.map(e => [typeof e.date === 'string' ? e.date : dayjs(e.date).format('YYYY-MM-DD'), e.value]));
+  const map = new Map<string, number>(entries.map(e => [e.date, e.value]));
   let total = 0; let successDays = 0;
   const days = dates.map(date => {
     const value = map.get(date);

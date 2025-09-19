@@ -7,6 +7,8 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import {handleModalSubmit as saisirHandleModalSubmit, getModale as saisirGetModale} from './commands/saisir';
+import {handleModalSubmit as objectifHandleModalSubmit} from './commands/objectif';
+import { buildWeekMessage } from './commands/resume-semaine';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -28,11 +30,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
   } else if (interaction.isButton()) {
     if (interaction.customId.startsWith('saisir-btn-')) {
       const dateISO = interaction.customId.substring('saisir-btn-'.length);
-      const modal = saisirGetModale(dateISO);
+      const modal = await saisirGetModale(dateISO, interaction.user.id);
       await interaction.showModal(modal);
     }
   } else if (interaction.isModalSubmit()) {
     await saisirHandleModalSubmit(interaction);
+    await objectifHandleModalSubmit(interaction);
   }
 });
 
@@ -64,7 +67,7 @@ function startScheduler() {
       console.error('Scheduler error', e);
     }
 		console.log('Fin du tick');
-  }, 60 * 1000/4);
+  }, 60 * 1000);
 }
 
 async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
@@ -107,22 +110,8 @@ async function sendWeeklySummaries(mondayISO: string) {
       const summary = await getWeekSummary(userId, mondayISO);
       if ((summary.goal ?? 0) === 0 && summary.total === 0) continue;
 
-      const lines: string[] = [];
-      lines.push(`<@${userId}>`);
-      lines.push('```');
-      lines.push(`Résumé semaine du ${mondayISO} au ${dayjs(mondayISO).add(6, 'day').format('YYYY-MM-DD')}`);
-      if (summary.goal) lines.push(`Objectif quotidien: ≈ ${summary.goal} pas`);
-      for (const d of summary.days) {
-        const val = d.value !== undefined ? d.value.toString() : '-';
-        const badge = summary.goal && d.value !== undefined && d.value >= summary.goal ? '✅' : '';
-        lines.push(`${d.date}: ≈ ${val} ${badge}`);
-      }
-      lines.push(`Total: ≈ ${summary.total} pas`);
-      lines.push(`Moyenne: ≈ ${Math.round(summary.average / 1000) * 1000} pas/jour`);
-      if (summary.goal) lines.push(`Jours objectif atteint: ${summary.successDays}/7`);
-      lines.push('```');
-
-      await textChannel.send({ content: lines.join('\n') });
+      const message = buildWeekMessage(userId, summary, mondayISO);
+      await textChannel.send(message);
     } catch (e) {
       console.warn('Impossible d\'envoyer le résumé pour', userId, e);
     }
