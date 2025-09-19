@@ -75,10 +75,10 @@ async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
   const users = await listUsers();
   const notFilled: string[] = [];
   for (const userId of users) {
-    const goal = await getGoal(userId);
-    if (!goal || goal === 0) continue; // ignorer sans objectif
-    const entry = await getEntry(userId, dateISO);
-    if (entry === undefined) notFilled.push(userId);
+    const {stepsGoal} = await getGoal(userId);
+    if (!stepsGoal || stepsGoal === 0) continue; // ignorer sans objectif
+    const {steps} = await getEntry(userId, dateISO);
+    if (steps === undefined) notFilled.push(userId);
   }
   if (notFilled.length === 0) return;
   const channelFetched = await client.channels.fetch(channelId);
@@ -87,7 +87,7 @@ async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
   const textChannel = channelFetched as TextChannel;
   const mentions = notFilled.map(id => `<@${id}>`).join(' ');
   await textChannel.send({
-    content: `Il est ${now.format('HH:mm')} Europe/Paris. ${mentions}\nVous n'avez pas encore saisi vos pas (~${dateISO}). Cliquez sur le bouton ci-dessous pour enregistrer (arrondi au millier).`,
+    content: `Il est ${now.format('HH:mm')} Europe/Paris. ${mentions}\nVous n'avez pas encore saisi vos pas du ${dateISO}. Cliquez sur le bouton ci-dessous pour enregistrer.`,
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()

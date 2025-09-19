@@ -20,43 +20,37 @@ export const data = new SlashCommandBuilder()
 		.setDescription('Utilisateur cible (défaut: toi)')
 	);
 
-function roundTo1000(v: number) {
-	return Math.round(v / 1000) * 1000;
-}
-
 export async function execute(interaction: ChatInputCommandInteraction) {
 	const utilisateurOpt = interaction.options.getUser('utilisateur');
 	const targetUser: User = utilisateurOpt || interaction.user;
 
-	// Si l'option utilisateur est renseignée, on affiche l'objectif de cet utilisateur
 	if (utilisateurOpt) {
-		const goal = await getGoal(targetUser.id);
-		if (!goal || goal === 0) {
+		const {stepsGoal} = await getGoal(targetUser.id);
+		if (stepsGoal === null) {
 			return interaction.reply({content: `<@${targetUser.id}> n'a pas d'objectif`});
 		}
-		return interaction.reply({content: `l'objectif de <@${targetUser.id}> est d'environ ${goal} pas / jour`});
+		return interaction.reply({content: `l'objectif de <@${targetUser.id}> est de ${stepsGoal} pas / jour`});
 	}
 
-	// Sinon, ouvrir un modal pour saisir son propre objectif
 	const modal = await getModale(interaction.user.id);
 	await interaction.showModal(modal);
 }
 
 export async function getModale(userId: string) {
-	const current = await getGoal(userId);
+	const {stepsGoal: current} = await getGoal(userId);
 	const modal = new ModalBuilder()
 		.setCustomId('objectif-modal')
-		.setTitle('Définir mon objectif de pas par jour');
+		.setTitle('Définir mes objectifs journaliers');
 
 	const input = new TextInputBuilder()
 		.setCustomId('pas')
-		.setLabel('Objectif')
+		.setLabel('Objectif de pas par jour')
 		.setPlaceholder('8000')
 		.setStyle(TextInputStyle.Short)
 		.setRequired(false);
 
 
-	if (current && current > 0) {
+	if (current !== null) {
 		input.setValue(String(current));
 	}
 
@@ -68,12 +62,10 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 	if (interaction.customId !== 'objectif-modal') return;
 	const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
 
-	// Vide => suppression de l'objectif
 	if (rawStr === '') {
-		await setGoal(interaction.user.id, 0);
+		await setGoal(interaction.user.id, {stepsGoal: null});
 		return interaction.reply({
 			content: `l'objectif de <@${interaction.user.id}> a été supprimé`,
-			flags: MessageFlags.Ephemeral
 		});
 	}
 
@@ -81,12 +73,10 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 	if (isNaN(raw) || raw < 0) {
 		return interaction.reply({content: 'valeur invalide: doit être un entier >= 0.', flags: MessageFlags.Ephemeral});
 	}
-	const arrondi = roundTo1000(raw);
-	await setGoal(interaction.user.id, arrondi);
+	await setGoal(interaction.user.id, {stepsGoal: raw});
 	return interaction.reply({
-		content: `le nouvel objectif de <@${interaction.user.id}> est d'environ ${arrondi} pas / jour (arrondi)`,
-		flags: MessageFlags.Ephemeral
+		content: `le nouvel objectif de <@${interaction.user.id}> est de ${raw} pas par jour`
 	});
 }
 
-export default {commandName, data, execute, handleModalSubmit, getModale};
+export default {commandName, data, execute};
