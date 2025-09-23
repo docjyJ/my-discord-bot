@@ -86,9 +86,10 @@ async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
 	console.log(lang.scheduler.reminderChannel, channelFetched?.id);
   if (!channelFetched || !channelFetched.isTextBased()) return;
   const textChannel = channelFetched as TextChannel;
-  const mentions = notFilled.map(id => `<@${id}>`).join(' ');
   await textChannel.send({
-    content: lang.scheduler.dailyPromptMessage(now.format('HH:mm'), mentions, dateISO),
+    content: notFilled.length > 1
+			? lang.scheduler.dailyPromptMessage(now.format('HH:mm'), notFilled, dateISO)
+			: lang.scheduler.dailyPromptMessageSingle(now.format('HH:mm'), notFilled[0], dateISO),
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()

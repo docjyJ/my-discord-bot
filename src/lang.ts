@@ -1,4 +1,14 @@
-// Centralisation des chaînes de caractères et helpers de formatage
+function formatDate(date: string): string {
+	const d = new Date(date);
+	if (isNaN(d.getTime())) return 'Date invalide';
+	return d.toLocaleDateString('fr-FR', {
+		weekday: 'long',
+		day: '2-digit',
+		month: 'long',
+		year: 'numeric'
+	});
+}
+
 export const lang = {
 	scheduler: {
 		ready: 'Discord bot is ready! 🤖',
@@ -7,8 +17,10 @@ export const lang = {
 		schedulerError: 'Scheduler error',
 		sendingRemindersFor: 'Envoi des rappels pour',
 		reminderChannel: 'Canal de rappel:',
-		dailyPromptMessage: (time: string, mentions: string, dateISO: string) =>
-			`Il est ${time} Europe/Paris. ${mentions}\nVous n'avez pas encore saisi vos pas du ${dateISO}. Cliquez sur le bouton ci-dessous pour enregistrer.`,
+		dailyPromptMessage: (time: string, userIds: string[], dateISO: string) =>
+			`Il est ${time}. <@${userIds.join('> <@')}>, vous n'avez pas encore saisi vos pas du ${formatDate(dateISO)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
+		dailyPromptMessageSingle: (time: string, userId: string, dateISO: string) =>
+			`Il est ${time}. <@${userId}>, tu n'as pas encore saisi tes pas du ${formatDate(dateISO)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
 		weeklySummarySendError: "Impossible d'envoyer le résumé pour",
 		connected: 'Connecté',
 	},
@@ -50,7 +62,7 @@ export const saisir = {
 		optionJourDescription: "Date AAAA-MM-JJ (optionnel, défaut: aujourd'hui Europe/Paris)",
 	},
 	modal: {
-		title: (date: string) => `Saisir les pas pour ${date}`,
+		title: (dateISO: string) => `Saisir les pas pour ${formatDate(dateISO)}`,
 		stepLabel: 'Nombre de pas',
 		stepPlaceholder: '7800',
 	},
@@ -63,12 +75,12 @@ export const saisir = {
 	},
 	replyAction: {
 		invalidDate: 'Date invalide. Format attendu AAAA-MM-JJ.',
-		entryDeleted: (userId: string, dateISO: string) => `<@${userId}> a supprimé sa saisie pour ${dateISO}.`,
-		noChange: (dateISO: string) => `Tu n'a pas changé ta saisie pour le ${dateISO}.`,
+		entryDeleted: (userId: string, dateISO: string) => `<@${userId}> a supprimé sa saisie pour le ${formatDate(dateISO)}.`,
+		noChange: (dateISO: string) => `Tu n'a pas changé ta saisie pour le ${formatDate(dateISO)}.`,
 		invalidValue: 'Valeur invalide: entrer un entier >= 0.',
-		saved: (userId: string, dateISO: string, step: number) => `<@${userId}> a fait ${step} pas le ${dateISO}. Félicitations !`,
-		savedReached: (userId: string, dateISO: string, objective:number, step: number) => `<@${userId}> a fait ${step} pas le ${dateISO}, Tu as atteint ton objectif de ${objective} pas, félicitations !`,
-		savedRemaining: (userId: string, dateISO: string, objective:number, step: number, missing: number) => `<@${userId}> a fait ${step} pas le ${dateISO}. Il te manque ${missing} pas pour atteindre ton objectif de ${objective} pas. Allez, tu peux le faire !`,
+		saved: (userId: string, dateISO: string, step: number) => `<@${userId}> a fait ${step} pas le ${formatDate(dateISO)}. Félicitations !`,
+		savedReached: (userId: string, dateISO: string, objective:number, step: number) => `<@${userId}> a fait ${step} pas le ${formatDate(dateISO)}, Tu as atteint ton objectif de ${objective} pas, félicitations !`,
+		savedRemaining: (userId: string, dateISO: string, objective:number, step: number, missing: number) => `<@${userId}> a fait ${step} pas le ${formatDate(dateISO)}. Il te manque ${missing} pas pour atteindre ton objectif de ${objective} pas. Allez, tu peux le faire !`,
 	},
 };
 
