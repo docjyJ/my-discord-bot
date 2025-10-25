@@ -228,63 +228,62 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	ctx.font = 'bold 42px DejaVuSans';
 	ctx.fillText(title, width / 2, 64);
 
-	const leftPad = 64;
-	const topPad = 90;
-	const avatarRadius = 64;
+	const pad = 32;
+	const topPad = 80;
+	const rightMargin = 48;
+	const bottomMargin = 48;
+
+	const cardW = 360;
+	const cardH = 184;
+	const statsY = height - bottomMargin - cardH;
+
+	const availableTop = Math.max(0, statsY - topPad);
+	const avatarDiameter = Math.max(128, Math.min(320, availableTop - 16));
+	const avatarRadius = Math.floor(avatarDiameter / 2);
+	const leftAvatarPad = cardW / 2 - avatarRadius;
 
 	ctx.save();
-	const avatarBg = ctx.createLinearGradient(leftPad, topPad, leftPad + avatarRadius * 2, topPad + avatarRadius * 2);
+	const avatarBg = ctx.createLinearGradient(pad, topPad, pad + leftAvatarPad + avatarRadius * 2, topPad + avatarRadius * 2);
 	avatarBg.addColorStop(0, '#0b1220');
 	avatarBg.addColorStop(1, '#0f172a');
 	ctx.beginPath();
-	ctx.arc(leftPad + avatarRadius, topPad + avatarRadius, avatarRadius, 0, Math.PI * 2);
+	ctx.arc(pad + avatarRadius + leftAvatarPad, topPad + avatarRadius, avatarRadius, 0, Math.PI * 2);
 	ctx.fillStyle = avatarBg;
 	ctx.fill();
 	const img = await loadImage(opts.avatarUrl);
 	ctx.save();
 	ctx.beginPath();
-	ctx.arc(leftPad + avatarRadius, topPad + avatarRadius, avatarRadius - 4, 0, Math.PI * 2);
+	ctx.arc(pad + avatarRadius + leftAvatarPad, topPad + avatarRadius, Math.max(avatarRadius - 6, 8), 0, Math.PI * 2);
 	ctx.clip();
-	const scale = Math.max((avatarRadius * 2 - 8) / img.width, (avatarRadius * 2 - 8) / img.height);
+	const scale = Math.max(((avatarRadius * 2) - 12) / img.width, ((avatarRadius * 2) - 12) / img.height);
 	const w = img.width * scale, h = img.height * scale;
-	ctx.drawImage(img, leftPad + avatarRadius - w / 2, topPad + avatarRadius - h / 2, w, h);
+	ctx.drawImage(img, pad + leftAvatarPad + avatarRadius - w / 2, topPad + avatarRadius - h / 2, w, h);
 	ctx.restore();
 	ctx.restore();
 
-	ctx.fillStyle = '#e5e7eb';
-	ctx.textAlign = 'left';
-	ctx.textBaseline = 'alphabetic';
-	ctx.font = 'bold 32px DejaVuSans';
-	ctx.fillText(opts.username, leftPad, topPad + avatarRadius * 2 + 36);
-
-
-	const statsY = topPad + avatarRadius * 2 + 64;
-	const cardW = 360;
-	const cardH = 184; // un peu plus haut pour inclure la série
 	ctx.beginPath();
-	ctx.roundRect(leftPad, statsY, cardW, cardH, 18);
-	const cardBg = ctx.createLinearGradient(leftPad, statsY, leftPad + cardW, statsY + cardH);
+	ctx.roundRect(pad, statsY, cardW, cardH, 18);
+	const cardBg = ctx.createLinearGradient(pad, statsY, pad + cardW, statsY + cardH);
 	cardBg.addColorStop(0, '#0b1220');
 	cardBg.addColorStop(1, '#0f172a');
 	ctx.fillStyle = cardBg;
 	ctx.fill();
+	ctx.textAlign = 'left';
+	ctx.textBaseline = 'alphabetic';
 	ctx.font = 'bold 26px DejaVuSans';
 	ctx.fillStyle = '#cbd5e1';
-	ctx.fillText(resumeLang.embed.fieldTotal(total), leftPad + 18, statsY + 40);
-	ctx.fillText(resumeLang.embed.fieldAverage(Math.round(average)), leftPad + 18, statsY + 78);
+	ctx.fillText(resumeLang.embed.fieldTotal(total), pad + 18, statsY + 40);
+	ctx.fillText(resumeLang.embed.fieldAverage(Math.round(average)), pad + 18, statsY + 78);
 	if (opts.goal) {
-		ctx.fillText(resumeLang.embed.fieldGoalReached(successDays), leftPad + 18, statsY + 116);
+		ctx.fillText(resumeLang.embed.fieldGoalReached(successDays), pad + 18, statsY + 116);
 	}
 	if (opts.streak > 0) {
-		ctx.fillText(resumeLang.embed.streak(opts.streak), leftPad + 18, statsY + 154);
+		ctx.fillText(resumeLang.embed.streak(opts.streak), pad + 18, statsY + 154);
 	}
 
-	// Right chart area (agrandi) avec marges uniformes à droite et en bas
-	const rightMargin = 48;
-	const bottomMargin = 48;
 	const gapLeftToChart = 24;
-	const chartX = leftPad + cardW + gapLeftToChart; // coller plus à gauche pour agrandir
-	const chartY = 80;
+	const chartX = pad + cardW + gapLeftToChart;
+	const chartY = topPad;
 	const chartW = width - chartX - rightMargin;
 	const chartH = height - chartY - bottomMargin;
 	ctx.beginPath();
@@ -295,24 +294,22 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	ctx.fillStyle = chartBg;
 	ctx.fill();
 
-	// Echelle et fond
 	const maxVal = Math.max(
 		opts.goal ?? 0,
 		...opts.days.map(d => d ?? 0),
 		1
 	);
-	const pad = 32;
 	const innerX = chartX + pad;
 	const innerY = chartY + pad;
 	const innerW = chartW - pad * 2;
-	const innerH = chartH - pad * 2; // marges uniformes, pas d'espace supplémentaire
+	const innerH = chartH - pad * 2;
 
 	const n = 7;
 	const gap = 18;
 	const barW = Math.floor((innerW - gap * (n - 1)) / n);
 	for (let i = 0; i < n; i++) {
 		const val = opts.days[i];
-		// fond slot
+
 		ctx.fillStyle = '#111827';
 		const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
 		const by = innerY + innerH - h;
@@ -320,7 +317,7 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 		ctx.beginPath();
 		ctx.roundRect(bx, innerY, barW, innerH, 10);
 		ctx.fill();
-		// barre
+
 		if (val) {
 			let g = ctx.createLinearGradient(bx, by, bx, innerY + innerH);
 			if (opts.goal && val >= opts.goal) {
