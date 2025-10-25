@@ -23,6 +23,7 @@ export const lang = {
 			`Il est ${time}. <@${userId}>, tu n'as pas encore saisi tes pas du ${formatDate(dateISO)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
 		weeklySummarySendError: "Impossible d'envoyer le résumé pour",
 		connected: 'Connecté',
+		weeklySummaryMessage: (userId: string, mondayISO: string) => `<@${userId}>, voici ton résumé pour la semaine du ${formatDate(mondayISO)}.`,
 	},
 	deploy: {
 		start: 'Synchronisation complète des commandes (/)...',
@@ -102,6 +103,7 @@ export const resumeSemaine = {
 	},
 	replyAction: {
 		invalidMonday: 'Date du lundi invalide.',
+		message: (userId: string, mondayISO: string) => `<@${userId}>, voici ton résumé pour la semaine du ${formatDate(mondayISO)}.`,
 	},
 	image: {
 		dayLetters: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],

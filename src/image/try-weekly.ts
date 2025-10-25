@@ -3,7 +3,6 @@ import {renderWeeklySummaryImage} from './renderer';
 
 async function main() {
 	const buf = await renderWeeklySummaryImage({
-		username: '@tester',
 		avatarUrl: 'https://www.slate.fr/uploads/store/drupal_slate/train_1.jpg',
 		mondayISO: '2025-10-20',
 		goal: 8000,

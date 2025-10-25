@@ -124,23 +124,15 @@ async function sendWeeklySummaries(mondayISO: string) {
 
 			// Fetch user to get username and avatar
 			const user = await client.users.fetch(userId);
-			const username = `@${user.username}`;
 			const avatarUrl = user.displayAvatarURL({extension: 'png', size: 512});
 
 			const sundayISO = dayjs(mondayISO).add(6, 'day').format('YYYY-MM-DD');
 			const streak = await getStreak(userId, sundayISO);
 
-			const img = await renderWeeklySummaryImage({
-				username,
-				avatarUrl,
-				mondayISO,
-				days,
-				goal,
-				streak,
-			});
+			const img = await renderWeeklySummaryImage({avatarUrl, mondayISO, days, goal, streak});
 
 			await textChannel.send({
-				content: `<@${userId}>`,
+				content: lang.scheduler.weeklySummaryMessage(userId, mondayISO),
 				files: [{attachment: img, name: `weekly-${userId}-${mondayISO}.png`}]
 			});
 		} catch (e) {

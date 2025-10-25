@@ -37,19 +37,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	const streak = await getStreak(interaction.user.id, sundayISO);
 
 	const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
-	const img = await renderWeeklySummaryImage({
-		username: `@${interaction.user.username}`,
-		avatarUrl,
-		mondayISO,
-		days,
-		goal,
-		streak,
-	});
-	const file = new AttachmentBuilder(img, {name: `weekly-${interaction.user.id}-${mondayISO}.png`});
+	const img = await renderWeeklySummaryImage({avatarUrl, mondayISO, days, goal, streak});
 
 	return interaction.reply({
-		content: `<@${interaction.user.id}>`,
-		files: [file]
+		content: resumeLang.replyAction.message(interaction.user.id, mondayISO),
+		files: [new AttachmentBuilder(img, {name: `weekly-${interaction.user.id}-${mondayISO}.png`})]
 	});
 }
 

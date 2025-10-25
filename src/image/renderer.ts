@@ -14,7 +14,6 @@ export type PresentationOptions = {
 };
 
 export type WeeklySummaryProps = {
-	username: string;
 	avatarUrl: string;
 	mondayISO: string;
 	goal: number | null;
