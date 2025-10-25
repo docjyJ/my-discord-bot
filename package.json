@@ -10,14 +10,16 @@
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "render:test": "tsx src/image/try-render.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",
     "dayjs": "^1.11.18",
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.2",
-    "prisma": "^6.16.2"
+    "prisma": "^6.16.2",
+    "@napi-rs/canvas": "^0.1.80"
   },
   "devDependencies": {
     "@types/node": "^20.19.14",

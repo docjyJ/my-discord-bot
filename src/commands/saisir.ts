@@ -6,13 +6,15 @@ import {
 	ModalSubmitInteraction,
 	SlashCommandBuilder,
 	TextInputBuilder,
-	TextInputStyle
+	TextInputStyle,
+	AttachmentBuilder
 } from 'discord.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import {getEntry, getGoal, setEntry} from '../steps/storage';
 import {saisir} from '../lang';
+import { renderPresentationImage } from '../image/renderer';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -59,6 +61,24 @@ export async function getModale(date: string, userId?: string) {
 	return modal;
 }
 
+async function buildAttachmentFor(interaction: ModalSubmitInteraction, dateISO: string, steps: number) {
+	try {
+		const { stepsGoal } = await getGoal(interaction.user.id);
+		const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 512 });
+		const img = await renderPresentationImage({
+			username: `@${interaction.user.username}`,
+			avatarUrl,
+			dateISO,
+			steps,
+			goal: stepsGoal ?? undefined,
+		});
+		return new AttachmentBuilder(img, { name: `progress-${interaction.user.id}-${dateISO}.png` });
+	} catch (e) {
+		console.warn('Image render failed', e);
+		return null;
+	}
+}
+
 export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 	if (!interaction.customId.startsWith(saisir.ids.modalPrefix)) return;
 
@@ -100,14 +120,20 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 	const {stepsGoal} = await getGoal(interaction.user.id);
 	await setEntry(interaction.user.id, dateISO, {steps: raw});
 
+	// Build attachment image
+	const attachment = await buildAttachmentFor(interaction, dateISO, raw);
+
 	if (stepsGoal === null) {
-		return interaction.reply({content: saisir.replyAction.saved(interaction.user.id, dateISO, raw)});
+		return interaction.reply({
+			content: saisir.replyAction.saved(interaction.user.id, dateISO, raw),
+			files: attachment ? [attachment] : undefined,
+		});
 	}
 
 	if (raw < stepsGoal) {
-		return interaction.reply({content: saisir.replyAction.savedRemaining(interaction.user.id, dateISO, stepsGoal, raw, stepsGoal - raw)});
+		return interaction.reply({content: saisir.replyAction.savedRemaining(interaction.user.id, dateISO, stepsGoal, raw, stepsGoal - raw), files: attachment ? [attachment] : undefined});
 	}
-	return interaction.reply({content: saisir.replyAction.savedReached(interaction.user.id, dateISO, stepsGoal, raw)});
+	return interaction.reply({content: saisir.replyAction.savedReached(interaction.user.id, dateISO, stepsGoal, raw), files: attachment ? [attachment] : undefined});
 
 }
 
