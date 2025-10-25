@@ -80,6 +80,12 @@ export const saisir = {
 		invalidValue: 'Valeur invalide: entrer un entier >= 0.',
 		saved: (userId: string, dateISO: string) => `<@${userId}> a enregistré ses pas pour le ${formatDate(dateISO)}.`,
 	},
+	image: {
+		dateTitle: (dateISO: string) => formatDate(dateISO),
+		streak: (days: number) => (days === 1 ? '1 jour' : `${days} jours`),
+		reached: 'Félicitations, tu as atteint ton objectif.',
+		remaining: (remaining: number) => `Il te reste ${remaining} pas pour atteindre ton objectif.`,
+	}
 };
 
 export const resumeSemaine = {
@@ -87,26 +93,27 @@ export const resumeSemaine = {
 		description: 'Afficher un résumé de la semaine (lundi->dimanche)',
 		optionLundiDescription: 'Date du lundi (AAAA-MM-JJ) de la semaine à résumer (optionnel)',
 	},
-	text: {
-		header: (mondayISO: string, endISO: string) => `Semaine ${mondayISO} → ${endISO}`,
-		goalLine: (goal: number) => `Objectif: = ${goal} pas/jour`,
-	},
 	embed: {
 		title: 'Résumé hebdomadaire',
-		fieldTotal: 'Total',
-		fieldAverage: 'Moyenne',
-		fieldGoalReached: 'Objectif atteint',
+		fieldTotal: (steps: number) => `Total : ${steps} pas`,
+		fieldAverage: (steps: number) => `Moyenne : ${steps} pas/jour`,
+		fieldGoalReached: (count: number) => (count === 0 ? 'Objectif atteint : aucun jour' : count === 1 ? 'Objectif atteint : 1 jour' : `Objectif atteint : ${count} jours`),
+		streak: (days: number) => (days === 1 ? 'Série : 1 jour' : `Série : ${days} jours`),
 	},
 	replyAction: {
 		invalidMonday: 'Date du lundi invalide.',
-	}
-};
-
-export const presentation = {
-	dateTitle: (dateISO: string) => formatDate(dateISO),
-	streak: (days: number) => (days === 1 ? '1 jour' : `${days} jours`),
-	footer: {
-		reached: 'Félicitations, tu as atteint ton objectif.',
-		remaining: (remaining: number) => `Il te reste ${remaining} pas pour atteindre ton objectif.`,
 	},
+	image: {
+		dayLetters: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+		title: (mondayISO: string) => {
+			const d = new Date(mondayISO);
+			if (isNaN(d.getTime())) return 'Semaine';
+			const sunday = new Date(d);
+			sunday.setDate(d.getDate() + 6);
+			const fmt = (x: Date, withYear = false) => x.toLocaleDateString('fr-FR', {
+				day: 'numeric', month: 'long', ...(withYear ? {year: 'numeric'} : {})
+			});
+			return `Semaine de ${fmt(d)} au ${fmt(sunday, true)}`;
+		}
+	}
 };
