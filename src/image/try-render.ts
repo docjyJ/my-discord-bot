@@ -8,6 +8,7 @@ async function main() {
 		dateISO: '2025-10-25',
 		steps: 5300,
 		goal: 8000,
+		streak: 3,
 	});
 	writeFileSync('test-render.png', buf);
 }
@@ -21,4 +22,3 @@ main()
 		console.error(e);
 		process.exit(1);
 	});
-

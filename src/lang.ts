@@ -78,9 +78,7 @@ export const saisir = {
 		entryDeleted: (userId: string, dateISO: string) => `<@${userId}> a supprimé sa saisie pour le ${formatDate(dateISO)}.`,
 		noChange: (dateISO: string) => `Tu n'a pas changé ta saisie pour le ${formatDate(dateISO)}.`,
 		invalidValue: 'Valeur invalide: entrer un entier >= 0.',
-		saved: (userId: string, dateISO: string, step: number) => `<@${userId}> a fait ${step} pas le ${formatDate(dateISO)}. Félicitations !`,
-		savedReached: (userId: string, dateISO: string, objective:number, step: number) => `<@${userId}> a fait ${step} pas le ${formatDate(dateISO)}, Tu as atteint ton objectif de ${objective} pas, félicitations !`,
-		savedRemaining: (userId: string, dateISO: string, objective:number, step: number, missing: number) => `<@${userId}> a fait ${step} pas le ${formatDate(dateISO)}. Il te manque ${missing} pas pour atteindre ton objectif de ${objective} pas. Allez, tu peux le faire !`,
+		saved: (userId: string, dateISO: string) => `<@${userId}> a enregistré ses pas pour le ${formatDate(dateISO)}.`,
 	},
 };
 
@@ -102,4 +100,13 @@ export const resumeSemaine = {
 	replyAction: {
 		invalidMonday: 'Date du lundi invalide.',
 	}
+};
+
+export const presentation = {
+	dateTitle: (dateISO: string) => formatDate(dateISO),
+	streak: (days: number) => (days === 1 ? '1 jour' : `${days} jours`),
+	footer: {
+		reached: 'Félicitations, tu as atteint ton objectif.',
+		remaining: (remaining: number) => `Il te reste ${remaining} pas pour atteindre ton objectif.`,
+	},
 };

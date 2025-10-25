@@ -1,6 +1,5 @@
 import {createCanvas, GlobalFonts, loadImage} from '@napi-rs/canvas';
-import dayjs from 'dayjs';
-import 'dayjs/locale/fr';
+import {presentation} from '../lang';
 
 (() => {
 	try {
@@ -47,13 +46,11 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 	ctx.fill();
 	ctx.globalAlpha = 1;
 
-	dayjs.locale('fr');
-	const dateTitle = dayjs(opts.dateISO).format('dddd DD MMMM YYYY');
 	ctx.fillStyle = '#f8fafc';
 	ctx.font = 'bold 44px DejaVuSans';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'alphabetic';
-	ctx.fillText(dateTitle, width / 2, 72);
+	ctx.fillText(presentation.dateTitle(opts.dateISO), width / 2, 72);
 
 	const circleRadius = 210;
 	const leftCenter = {x: width * 0.3, y: height * 0.52};
@@ -166,7 +163,7 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 	if (reached && opts.streak > 0) {
 		const badgeX = rightCenter.x + circleRadius - 36;
 		const badgeY = rightCenter.y - circleRadius + 36;
-		ctx.fillStyle = reached ? '#16a34a' : '#3b82f6';
+		ctx.fillStyle = '#16a34a';
 		ctx.beginPath();
 		ctx.roundRect(badgeX - 56, badgeY - 24, 112, 48, 14);
 		ctx.fill();
@@ -174,7 +171,7 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 		ctx.fillStyle = '#f8fafc';
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText(opts.streak == 1  ? '1 jour': `${opts.streak} jours`, badgeX, badgeY + 8);
+		ctx.fillText(presentation.streak(opts.streak), badgeX, badgeY + 8);
 	}
 
 	ctx.restore();
@@ -184,10 +181,10 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 	ctx.fillStyle = '#cbd5e1';
 	ctx.textBaseline = 'alphabetic';
 	if (hasGoal && reached) {
-		ctx.fillText('Félicitations, tu as atteint ton objectif.', width / 2, height - 36);
+		ctx.fillText(presentation.footer.reached, width / 2, height - 36);
 	} else if (hasGoal && !reached) {
 		const remaining = Math.max(0, goal - opts.steps);
-		ctx.fillText(`Il te reste ${remaining} pas pour atteindre ton objectif.`, width / 2, height - 36);
+		ctx.fillText(presentation.footer.remaining(remaining), width / 2, height - 36);
 	}
 
 	return canvas.toBuffer('image/png');

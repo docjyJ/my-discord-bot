@@ -1,20 +1,20 @@
 import {
 	ActionRowBuilder,
+	AttachmentBuilder,
 	ChatInputCommandInteraction,
 	MessageFlags,
 	ModalBuilder,
 	ModalSubmitInteraction,
 	SlashCommandBuilder,
 	TextInputBuilder,
-	TextInputStyle,
-	AttachmentBuilder
+	TextInputStyle
 } from 'discord.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import {getEntry, getGoal, setEntry, getStreak} from '../steps/storage';
+import {getEntry, getGoal, getStreak, setEntry} from '../steps/storage';
 import {saisir} from '../lang';
-import { renderPresentationImage } from '../image/renderer';
+import {renderPresentationImage} from '../image/renderer';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -62,23 +62,18 @@ export async function getModale(date: string, userId?: string) {
 }
 
 async function buildAttachmentFor(interaction: ModalSubmitInteraction, dateISO: string, steps: number) {
-	try {
-		const { stepsGoal } = await getGoal(interaction.user.id);
-		const streak = await getStreak(interaction.user.id, dateISO);
-		const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 512 });
-		const img = await renderPresentationImage({
-			username: `@${interaction.user.username}`,
-			avatarUrl,
-			dateISO,
-			steps,
-			goal: stepsGoal ?? undefined,
-			streak,
-		});
-		return new AttachmentBuilder(img, { name: `progress-${interaction.user.id}-${dateISO}.png` });
-	} catch (e) {
-		console.warn('Image render failed', e);
-		return null;
-	}
+	const {stepsGoal} = await getGoal(interaction.user.id);
+	const streak = await getStreak(interaction.user.id, dateISO);
+	const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
+	const img = await renderPresentationImage({
+		username: `@${interaction.user.username}`,
+		avatarUrl,
+		dateISO,
+		steps,
+		goal: stepsGoal,
+		streak,
+	});
+	return new AttachmentBuilder(img, {name: `progress-${interaction.user.id}-${dateISO}.png`});
 }
 
 export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
@@ -119,20 +114,11 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 		});
 	}
 
-	const {stepsGoal} = await getGoal(interaction.user.id);
 	await setEntry(interaction.user.id, dateISO, {steps: raw});
 
-	// Build attachment image
-	const attachment = await buildAttachmentFor(interaction, dateISO, raw);
-
-	// Message text rule: if no goal OR reached => Félicitations, else Courage
-	const goal = stepsGoal;
-	const reached = goal !== null && goal > 0 ? raw >= goal : true;
-	const content = reached ? `Félicitation <@${interaction.user.id}>` : `Courage <@${interaction.user.id}>`;
-
 	return interaction.reply({
-		content,
-		files: attachment ? [attachment] : undefined,
+		content: saisir.replyAction.saved(interaction.user.id, dateISO),
+		files: [await buildAttachmentFor(interaction, dateISO, raw)]
 	});
 }
 
