@@ -1,12 +1,7 @@
 import {createCanvas, GlobalFonts, loadImage} from '@napi-rs/canvas';
 import {presentation} from '../lang';
 
-(() => {
-	try {
-		GlobalFonts.registerFromPath('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVuSans');
-	} catch {
-	}
-})();
+GlobalFonts.registerFromPath('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVuSans');
 
 export type PresentationOptions = {
 	username: string;
