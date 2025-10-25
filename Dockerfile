@@ -6,7 +6,7 @@ ENV CI=true
 
 # Install fonts for canvas text rendering (Noto)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    fonts-noto-core \
+    fonts-dejavu-core \
   && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable

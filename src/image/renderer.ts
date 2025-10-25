@@ -50,7 +50,7 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 	dayjs.locale('fr');
 	const dateTitle = dayjs(opts.dateISO).format('dddd DD MMMM YYYY');
 	ctx.fillStyle = '#f8fafc';
-	ctx.font = 'bold 44px "DejaVu Sans"';
+	ctx.font = 'bold 44px DejaVuSans';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'alphabetic';
 	ctx.fillText(dateTitle, width / 2, 72);
@@ -153,11 +153,11 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 	ctx.fillStyle = '#e5e7eb';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	ctx.font = 'bold 80px "DejaVu Sans"';
+	ctx.font = 'bold 80px DejaVuSans';
 	ctx.fillText(`${opts.steps}`, rightCenter.x, mainY);
 
 	if (hasGoal) {
-		ctx.font = 'bold 34px "DejaVu Sans"';
+		ctx.font = 'bold 34px DejaVuSans';
 		ctx.fillStyle = '#94a3b8';
 		ctx.textBaseline = 'alphabetic';
 		ctx.fillText(`/ ${goal}`, rightCenter.x, rightCenter.y + GOAL_LINE_OFFSET);
@@ -170,17 +170,17 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 		ctx.beginPath();
 		ctx.roundRect(badgeX - 56, badgeY - 24, 112, 48, 14);
 		ctx.fill();
-		ctx.font = 'bold 24px "DejaVu Sans"';
+		ctx.font = 'bold 24px DejaVuSans';
 		ctx.fillStyle = '#f8fafc';
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText(`${opts.streak} 🔥`, badgeX, badgeY + 8);
+		ctx.fillText(opts.streak == 1  ? '1 jour': `${opts.streak} jours`, badgeX, badgeY + 8);
 	}
 
 	ctx.restore();
 
 	ctx.textAlign = 'center';
-	ctx.font = '30px "DejaVu Sans"';
+	ctx.font = '30px DejaVuSans';
 	ctx.fillStyle = '#cbd5e1';
 	ctx.textBaseline = 'alphabetic';
 	if (hasGoal && reached) {
