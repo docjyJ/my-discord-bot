@@ -114,3 +114,32 @@ export async function markWeeklySummary(mondayISO: string) {
 		create: {key: 'lastWeeklySummaryMonday', value: mondayISO}
 	});
 }
+
+// Compute current success streak (consecutive days reaching goal) up to and including dateISO
+export async function getStreak(userId: string, dateISO: string): Promise<number> {
+	const user = await prisma.user.findUnique({where: {id: userId}, select: {stepsGoal: true}});
+	const goal = user?.stepsGoal ?? null;
+	if (!goal || goal <= 0) return 0;
+	const zone = 'Europe/Paris';
+	const end = dayjs.tz(dateISO, zone);
+	if (!end.isValid()) return 0;
+	const windowDays = 60; // reasonable window
+	const start = end.subtract(windowDays - 1, 'day');
+	const dates: string[] = [];
+	for (let i = 0; i < windowDays; i++) {
+		dates.push(start.add(i, 'day').format('YYYY-MM-DD'));
+	}
+	const entries = await prisma.dailyEntry.findMany({
+		where: {userId, date: {in: dates}, steps: {not: null}},
+		select: {date: true, steps: true}
+	});
+	const map = new Map<string, number>(entries.map(e => [e.date, e.steps as number]));
+	let streak = 0;
+	for (let i = 0; i < windowDays; i++) {
+		const d = end.subtract(i, 'day').format('YYYY-MM-DD');
+		const val = map.get(d);
+		if (val === undefined || val < goal) break;
+		streak++;
+	}
+	return streak;
+}

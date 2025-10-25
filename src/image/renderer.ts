@@ -1,144 +1,194 @@
-import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import {createCanvas, GlobalFonts, loadImage} from '@napi-rs/canvas';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 
-// Simple font registration attempts common system fonts; fallback to built-in sans.
 (() => {
-  try {
-    GlobalFonts.registerFromPath('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVuSans');
-  } catch {}
+	try {
+		GlobalFonts.registerFromPath('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVuSans');
+	} catch {
+	}
 })();
 
 export type PresentationOptions = {
-  username: string; // e.g., "@user"
-  avatarUrl?: string; // discord avatar URL
-  dateISO: string; // YYYY-MM-DD in Europe/Paris
-  steps: number; // current steps
-  goal?: number | null; // optional goal
+	username: string;
+	avatarUrl?: string;
+	dateISO: string;
+	steps: number;
+	goal: number | null;
+	streak: number;
 };
 
 export async function renderPresentationImage(opts: PresentationOptions): Promise<Buffer> {
-  const width = 1200;
-  const height = 630; // twitter card ratio
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
 
-  // Background gradient
-  const grad = ctx.createLinearGradient(0, 0, width, height);
-  grad.addColorStop(0, '#0f2027');
-  grad.addColorStop(1, '#203a43');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, height);
+	const hasGoal = opts.goal !== null && opts.goal > 0;
+	const goal = hasGoal ? Math.max(0, opts.goal as number) : 0;
+	const progress = hasGoal ? Math.min(0.98, Math.max(0, opts.steps / goal)) : 0;
+	const reached = hasGoal && opts.steps >= goal;
 
-  // Title with date (top center)
-  dayjs.locale('fr');
-  const dateTitle = dayjs(opts.dateISO).format('dddd DD MMMM YYYY');
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 42px DejaVuSans, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(dateTitle, width / 2, 64);
+	const width = 1200;
+	const height = 630;
+	const canvas = createCanvas(width, height);
+	const ctx = canvas.getContext('2d');
 
-  // Congratulation/courage message under title
-  const hasGoal = !!opts.goal && opts.goal! > 0;
-  const reached = hasGoal && opts.steps >= (opts.goal as number);
-  const message = reached ? `Félicitations ${opts.username} !` : `Courage ${opts.username} !`;
-  ctx.font = 'bold 36px DejaVuSans, sans-serif';
-  ctx.fillStyle = reached ? '#a3e635' : '#60a5fa';
-  ctx.fillText(message, width / 2, 110);
+	const grad = ctx.createLinearGradient(0, 0, width, height);
+	grad.addColorStop(0, '#0a0f1f');
+	grad.addColorStop(1, '#1f3b73');
+	ctx.fillStyle = grad;
+	ctx.fillRect(0, 0, width, height);
 
-  // Layout: two circles side-by-side
-  const circleRadius = 210;
-  const leftCenter = { x: width * 0.3, y: height * 0.55 };
-  const rightCenter = { x: width * 0.7, y: height * 0.55 };
+	ctx.globalAlpha = 0.12;
+	ctx.fillStyle = '#6ee7b7';
+	ctx.beginPath();
+	ctx.arc(width * 0.1, height * 0.22, 160, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.fillStyle = '#93c5fd';
+	ctx.beginPath();
+	ctx.arc(width * 0.9, height * 0.87, 200, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.globalAlpha = 1;
 
-  // Left circle: avatar mask
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(leftCenter.x, leftCenter.y, circleRadius, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.clip();
-  // background for avatar circle
-  ctx.fillStyle = '#111827';
-  ctx.fillRect(leftCenter.x - circleRadius, leftCenter.y - circleRadius, circleRadius * 2, circleRadius * 2);
-  if (opts.avatarUrl) {
-    try {
-      const img = await loadImage(opts.avatarUrl);
-      // cover fit
-      const scale = Math.max(circleRadius * 2 / img.width, circleRadius * 2 / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      ctx.drawImage(img, leftCenter.x - w / 2, leftCenter.y - h / 2, w, h);
-    } catch {}
-  }
-  ctx.restore();
-  // Draw circle border
-  ctx.strokeStyle = '#93c5fd';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.arc(leftCenter.x, leftCenter.y, circleRadius, 0, Math.PI * 2);
-  ctx.stroke();
+	dayjs.locale('fr');
+	const dateTitle = dayjs(opts.dateISO).format('dddd DD MMMM YYYY');
+	ctx.fillStyle = '#f8fafc';
+	ctx.font = 'bold 44px "DejaVu Sans"';
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'alphabetic';
+	ctx.fillText(dateTitle, width / 2, 72);
 
-  // Right circle: radial arc progress and numbers
-  ctx.save();
-  // base circle background
-  ctx.beginPath();
-  ctx.arc(rightCenter.x, rightCenter.y, circleRadius, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fillStyle = '#0b1220';
-  ctx.fill();
+	const circleRadius = 210;
+	const leftCenter = {x: width * 0.3, y: height * 0.52};
+	const rightCenter = {x: width * 0.7, y: height * 0.52};
 
-  const goal = hasGoal ? Math.max(0, opts.goal as number) : 0;
-  const progress = goal > 0 ? Math.min(1, Math.max(0, opts.steps / goal)) : 0;
+	const ARC_OFFSET = 16;
+	const ARC_WIDTH = 22;
+	const PROGRESS_BG_INNER = '#0b1220';
+	const PROGRESS_BG_OUTER = '#0f172a';
 
-  // draw track
-  ctx.strokeStyle = '#111827';
-  ctx.lineWidth = 20;
-  ctx.beginPath();
-  ctx.arc(rightCenter.x, rightCenter.y, circleRadius - 14, 0, Math.PI * 2);
-  ctx.stroke();
 
-  // draw progress arc (start at -90deg for top)
-  if (progress > 0) {
-    ctx.strokeStyle = reached ? '#a3e635' : '#3b82f6';
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    const start = -Math.PI / 2;
-    const end = start + progress * Math.PI * 2;
-    ctx.arc(rightCenter.x, rightCenter.y, circleRadius - 14, start, end);
-    ctx.stroke();
-  }
+	const avatarBgGrad = ctx.createLinearGradient(
+		leftCenter.x - circleRadius,
+		leftCenter.y - circleRadius,
+		leftCenter.x + circleRadius,
+		leftCenter.y + circleRadius
+	);
+	avatarBgGrad.addColorStop(0, PROGRESS_BG_INNER);
+	avatarBgGrad.addColorStop(1, PROGRESS_BG_OUTER);
+	ctx.beginPath();
+	ctx.arc(leftCenter.x, leftCenter.y, circleRadius, 0, Math.PI * 2);
+	ctx.closePath();
+	ctx.fillStyle = avatarBgGrad;
+	ctx.fill();
 
-  // center text: big steps number
-  ctx.fillStyle = '#e5e7eb';
-  ctx.textAlign = 'center';
-  ctx.font = 'bold 72px DejaVuSans, sans-serif';
-  ctx.fillText(`${opts.steps}`, rightCenter.x, rightCenter.y - 8);
+	const INNER_PADDING = 5;
+	const innerRadius = circleRadius - INNER_PADDING;
+	if (opts.avatarUrl) {
+		const img = await loadImage(opts.avatarUrl);
+		ctx.save();
+		ctx.beginPath();
+		ctx.arc(leftCenter.x, leftCenter.y, innerRadius, 0, Math.PI * 2);
+		ctx.closePath();
+		ctx.clip();
 
-  // second line with goal if defined
-  if (hasGoal) {
-    ctx.font = 'bold 32px DejaVuSans, sans-serif';
-    ctx.fillStyle = '#9ca3af';
-    ctx.fillText(`/ ${goal}`, rightCenter.x, rightCenter.y + 32);
-  }
+		const scale = Math.max((innerRadius * 2) / img.width, (innerRadius * 2) / img.height);
+		const w = img.width * scale;
+		const h = img.height * scale;
+		ctx.drawImage(img, leftCenter.x - w / 2, leftCenter.y - h / 2, w, h);
 
-  // If reached 100%, add fleur-de-lys icons around
-  if (reached) {
-    ctx.font = 'bold 46px DejaVuSans, sans-serif';
-    ctx.fillStyle = '#fef3c7';
-    const emojis = ['⚜️','⚜️','⚜️'];
-    ctx.fillText(emojis.join('  '), rightCenter.x, rightCenter.y - circleRadius - 20 + 60);
-  }
+		ctx.restore();
+	}
 
-  ctx.restore();
+	ctx.save();
+	const progressBgGrad = ctx.createLinearGradient(
+		rightCenter.x - circleRadius,
+		rightCenter.y - circleRadius,
+		rightCenter.x + circleRadius,
+		rightCenter.y + circleRadius
+	);
+	progressBgGrad.addColorStop(0, PROGRESS_BG_INNER);
+	progressBgGrad.addColorStop(1, PROGRESS_BG_OUTER);
+	ctx.beginPath();
+	ctx.arc(rightCenter.x, rightCenter.y, circleRadius, 0, Math.PI * 2);
+	ctx.closePath();
+	ctx.fillStyle = progressBgGrad;
+	ctx.fill();
 
-  // Bottom text
-  ctx.textAlign = 'center';
-  ctx.font = '28px DejaVuSans, sans-serif';
-  ctx.fillStyle = '#cbd5e1';
-  if (hasGoal && !reached) {
-    const remaining = Math.max(0, goal - opts.steps);
-    ctx.fillText(`Il te reste ${remaining} pas pour atteindre ton objectif.`, width / 2, height - 32);
-  }
+	ctx.strokeStyle = '#1f2937';
+	ctx.lineWidth = ARC_WIDTH;
+	ctx.beginPath();
+	ctx.arc(rightCenter.x, rightCenter.y, circleRadius - ARC_OFFSET, 0, Math.PI * 2);
+	ctx.stroke();
 
-  return canvas.toBuffer('image/png');
+	if (reached) {
+		const arcGrad = ctx.createLinearGradient(rightCenter.x - circleRadius, rightCenter.y, rightCenter.x + circleRadius, rightCenter.y);
+		arcGrad.addColorStop(0, '#22c55e');
+		arcGrad.addColorStop(1, '#84cc16');
+		ctx.strokeStyle = arcGrad;
+		const prevCap = ctx.lineCap;
+		ctx.lineCap = 'butt';
+		ctx.beginPath();
+		ctx.arc(rightCenter.x, rightCenter.y, circleRadius - ARC_OFFSET, 0, Math.PI * 2);
+		ctx.stroke();
+		ctx.lineCap = prevCap;
+	} else if (progress > 0) {
+		const arcGrad = ctx.createLinearGradient(rightCenter.x - circleRadius, rightCenter.y, rightCenter.x + circleRadius, rightCenter.y);
+		arcGrad.addColorStop(0, '#60a5fa');
+		arcGrad.addColorStop(1, '#c084fc');
+		ctx.strokeStyle = arcGrad;
+		const prevCap = ctx.lineCap;
+		ctx.lineCap = 'round';
+		ctx.beginPath();
+		const start = -Math.PI / 2;
+		const end = start + progress * Math.PI * 2;
+		ctx.arc(rightCenter.x, rightCenter.y, circleRadius - ARC_OFFSET, start, end);
+		ctx.stroke();
+		ctx.lineCap = prevCap;
+	}
+
+	const GOAL_LINE_OFFSET = 45;
+	let mainY = rightCenter.y;
+	if (hasGoal) {
+		mainY = rightCenter.y - GOAL_LINE_OFFSET + (80 - 34) / 2;
+	}
+
+	ctx.fillStyle = '#e5e7eb';
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.font = 'bold 80px "DejaVu Sans"';
+	ctx.fillText(`${opts.steps}`, rightCenter.x, mainY);
+
+	if (hasGoal) {
+		ctx.font = 'bold 34px "DejaVu Sans"';
+		ctx.fillStyle = '#94a3b8';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText(`/ ${goal}`, rightCenter.x, rightCenter.y + GOAL_LINE_OFFSET);
+	}
+
+	if (reached && opts.streak > 0) {
+		const badgeX = rightCenter.x + circleRadius - 36;
+		const badgeY = rightCenter.y - circleRadius + 36;
+		ctx.fillStyle = reached ? '#16a34a' : '#3b82f6';
+		ctx.beginPath();
+		ctx.roundRect(badgeX - 56, badgeY - 24, 112, 48, 14);
+		ctx.fill();
+		ctx.font = 'bold 24px "DejaVu Sans"';
+		ctx.fillStyle = '#f8fafc';
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText(`${opts.streak} 🔥`, badgeX, badgeY + 8);
+	}
+
+	ctx.restore();
+
+	ctx.textAlign = 'center';
+	ctx.font = '30px "DejaVu Sans"';
+	ctx.fillStyle = '#cbd5e1';
+	ctx.textBaseline = 'alphabetic';
+	if (hasGoal && reached) {
+		ctx.fillText('Félicitations, tu as atteint ton objectif.', width / 2, height - 36);
+	} else if (hasGoal && !reached) {
+		const remaining = Math.max(0, goal - opts.steps);
+		ctx.fillText(`Il te reste ${remaining} pas pour atteindre ton objectif.`, width / 2, height - 36);
+	}
+
+	return canvas.toBuffer('image/png');
 }

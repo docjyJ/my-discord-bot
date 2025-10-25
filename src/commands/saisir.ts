@@ -12,7 +12,7 @@ import {
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import {getEntry, getGoal, setEntry} from '../steps/storage';
+import {getEntry, getGoal, setEntry, getStreak} from '../steps/storage';
 import {saisir} from '../lang';
 import { renderPresentationImage } from '../image/renderer';
 
@@ -64,6 +64,7 @@ export async function getModale(date: string, userId?: string) {
 async function buildAttachmentFor(interaction: ModalSubmitInteraction, dateISO: string, steps: number) {
 	try {
 		const { stepsGoal } = await getGoal(interaction.user.id);
+		const streak = await getStreak(interaction.user.id, dateISO);
 		const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 512 });
 		const img = await renderPresentationImage({
 			username: `@${interaction.user.username}`,
@@ -71,6 +72,7 @@ async function buildAttachmentFor(interaction: ModalSubmitInteraction, dateISO: 
 			dateISO,
 			steps,
 			goal: stepsGoal ?? undefined,
+			streak,
 		});
 		return new AttachmentBuilder(img, { name: `progress-${interaction.user.id}-${dateISO}.png` });
 	} catch (e) {
@@ -123,18 +125,15 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 	// Build attachment image
 	const attachment = await buildAttachmentFor(interaction, dateISO, raw);
 
-	if (stepsGoal === null) {
-		return interaction.reply({
-			content: saisir.replyAction.saved(interaction.user.id, dateISO, raw),
-			files: attachment ? [attachment] : undefined,
-		});
-	}
+	// Message text rule: if no goal OR reached => Félicitations, else Courage
+	const goal = stepsGoal;
+	const reached = goal !== null && goal > 0 ? raw >= goal : true;
+	const content = reached ? `Félicitation <@${interaction.user.id}>` : `Courage <@${interaction.user.id}>`;
 
-	if (raw < stepsGoal) {
-		return interaction.reply({content: saisir.replyAction.savedRemaining(interaction.user.id, dateISO, stepsGoal, raw, stepsGoal - raw), files: attachment ? [attachment] : undefined});
-	}
-	return interaction.reply({content: saisir.replyAction.savedReached(interaction.user.id, dateISO, stepsGoal, raw), files: attachment ? [attachment] : undefined});
-
+	return interaction.reply({
+		content,
+		files: attachment ? [attachment] : undefined,
+	});
 }
 
 export default {commandName, data, execute};
