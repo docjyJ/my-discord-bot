@@ -1,40 +1,32 @@
-import {AttachmentBuilder, ChatInputCommandInteraction, SlashCommandBuilder} from 'discord.js';
-import {getStreak, getWeekSummary} from '../storage';
-import {resumeSemaine as resumeLang} from '../lang';
+import {AttachmentBuilder, type ChatInputCommandInteraction, SlashCommandBuilder} from 'discord.js';
+import DateTime from '../date-time';
 import {renderWeeklySummaryImage} from '../image/renderer';
-import DateTime from "../date-time";
+import {resumeSemaine as resumeLang} from '../lang';
+import {getStreak, getWeekSummary} from '../storage';
 
 export const commandName = 'resume-semaine';
 
 export const data = new SlashCommandBuilder()
-	.setName(commandName)
-	.setDescription(resumeLang.command.description)
-	.addStringOption(o => o.setName('lundi')
-		.setDescription(resumeLang.command.optionLundiDescription)
-	);
+  .setName(commandName)
+  .setDescription(resumeLang.command.description)
+  .addStringOption(o => o.setName('lundi').setDescription(resumeLang.command.optionLundiDescription));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-	const lundiOpt = interaction.options.getString('lundi');
-	let monday;
-	if (lundiOpt) {
-		monday = DateTime.parse(lundiOpt);
-		if (monday === null) {
-			return interaction.reply({content: resumeLang.replyAction.invalidMonday, ephemeral: true});
-		}
-	} else {
-		monday = DateTime.now();
-	}
-	monday = monday.addDay(1-monday.weekDay())
-	const {days, goal} = await getWeekSummary(interaction.user.id, monday);
-	const streak = await getStreak(interaction.user.id, monday.addDay(6));
+  const lundiOpt = interaction.options.getString('lundi');
+  const date = lundiOpt ? DateTime.parse(lundiOpt) : DateTime.now();
+  if (date === null) return interaction.reply({content: resumeLang.replyAction.invalidMonday, ephemeral: true});
 
-	const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
-	const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});
+  const monday = date.addDay(1 - date.weekDay());
+  const {days, goal} = await getWeekSummary(interaction.user.id, monday);
+  const streak = await getStreak(interaction.user.id, monday.addDay(6));
 
-	return interaction.reply({
-		content: resumeLang.replyAction.message(interaction.user.id, monday),
-		files: [new AttachmentBuilder(img, {name: `weekly-${interaction.user.id}-${monday.toDateString()}.png`})]
-	});
+  const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
+  const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});
+
+  return interaction.reply({
+    content: resumeLang.replyAction.message(interaction.user.id, monday),
+    files: [new AttachmentBuilder(img, {name: `weekly-${interaction.user.id}-${monday.toDateString()}.png`})]
+  });
 }
 
 export default {commandName, data, execute};

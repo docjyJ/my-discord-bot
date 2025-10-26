@@ -12,17 +12,20 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "render:test": "tsx src/image/try-render.ts",
-    "render:weekly": "tsx src/image/try-weekly.ts"
+    "render:weekly": "tsx src/image/try-weekly.ts",
+    "biome": "biome check",
+    "biome:fix": "biome check --fix",
+    "check": "pnpm typecheck && pnpm biome"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.80",
     "@prisma/client": "^6.16.2",
-    "dayjs": "^1.11.18",
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.2",
     "prisma": "^6.16.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.1",
     "@types/node": "^20.19.14",
     "tsup": "^8.5.0",
     "tsx": "^4.20.5",
