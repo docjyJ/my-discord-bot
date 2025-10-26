@@ -45,8 +45,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 	}
 });
 
+let schedulerRunning = false;
 function startScheduler() {
 	setInterval(async () => {
+		if (schedulerRunning) return; // éviter les overlaps
+		schedulerRunning = true;
 		console.log(lang.scheduler.schedulerTick, new Date().toISOString());
 		try {
 			const now = DateTime.now()
@@ -69,8 +72,10 @@ function startScheduler() {
 			}
 		} catch (e) {
 			console.error(lang.scheduler.schedulerError, e);
+		} finally {
+			console.log(lang.scheduler.schedulerEndTick);
+			schedulerRunning = false;
 		}
-		console.log(lang.scheduler.schedulerEndTick);
 	}, 60 * 1000);
 }
 

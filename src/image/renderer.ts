@@ -86,10 +86,10 @@ export type WeeklySummaryProps = {
 };
 
 export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promise<Buffer> {
-	const filledDays = opts.days.filter(d => d !== null);
+	const filledDays = opts.days.filter((d): d is number => d !== null);
 	const successDays = opts.goal !== null ? filledDays.filter(d => d >= opts.goal!).length : 0;
 	const total = filledDays.reduce((acc, val) => acc + val, 0);
-	const average = Math.ceil(total / filledDays.length);
+	const average = filledDays.length > 0 ? Math.ceil(total / filledDays.length) : 0;
 
 
 	const width = 1200;
@@ -162,23 +162,19 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 
 		draw.roundedRectFill(innerX + i * (barW + gap), innerY, barW, innerH, 10, '#111827');
 
-		if (val) {
-			const bx = innerX + i * (barW + gap);
-			const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
-			const by = innerY + innerH - h;
+		const bx = innerX + i * (barW + gap);
+		const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
+		const by = innerY + innerH - h;
+		if (val !== null) {
 			const topColor = opts.goal && val >= opts.goal ? '#22c55e' : '#60a5fa';
 			const bottomColor = opts.goal && val >= opts.goal ? '#84cc16' : '#c084fc';
 			const g = draw.createLinearGradient(bx, by, bx, innerY + innerH, topColor, bottomColor);
 			draw.roundedRectFill(bx, by, barW, h, 10, g);
 			draw.text(`${val}`, bx + barW / 2, by - 16, '#e5e7eb', 20);
 		} else {
-			const bx = innerX + i * (barW + gap);
-			const h = 0;
-			const by = innerY + innerH - h;
 			draw.text('-', bx + barW / 2, by - 16, '#e5e7eb', 20);
 		}
 
-		const bx = innerX + i * (barW + gap);
 		const dayLabel = resumeLang.image.dayLetters[i] || '';
 		const yLabel = chartY + chartH - 20;
 		draw.text(dayLabel, bx + barW / 2, yLabel, '#94a3b8', 20);
