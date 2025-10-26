@@ -29,7 +29,7 @@ type Circle = {
 }
 
 class Draw {
-	ctx: SKRSContext2D;
+	private ctx: SKRSContext2D;
 	private canvas: Canvas;
 	readonly width: number;
 	readonly height: number;
@@ -108,6 +108,13 @@ class Draw {
 		this.ctx.stroke();
 	}
 
+	public roundedRectFill(x: number, y: number, w: number, h: number, r: number, fill: string | CanvasGradient) {
+		this.ctx.fillStyle = fill as any;
+		this.ctx.beginPath();
+		this.ctx.roundRect(x, y, w, h, r as any);
+		this.ctx.fill();
+	}
+
 	public toBuffer() {
 		return this.canvas.toBuffer('image/png');
 	}
@@ -170,11 +177,8 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 	if (progress === 1 && streak !== 0) {
 		const badgeX = right_x + widget_radius - 36;
 		const badgeY = h_center - widget_radius + 36;
-		draw.ctx.fillStyle = '#16a34a';
-		draw.ctx.beginPath();
-		draw.ctx.roundRect(badgeX - 56, badgeY - 24, 112, 48, 14);
-		draw.ctx.fill();
-		draw.text(saisir.image.streak(streak), badgeX, badgeY + 8, '#f8fafc', 24);
+		draw.roundedRectFill(badgeX - 56, badgeY - 24, 112, 48, 14, '#16a34a');
+		draw.text(saisir.image.streak(streak), badgeX, badgeY, '#f8fafc', 24);
 	}
 
 
@@ -226,25 +230,16 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	draw.backgroundCircle(avatar);
 	draw.avatarCircle({x: avatar.x, y: avatar.y, radius: avatar.radius - 6}, await loadImage(opts.avatarUrl));
 
+	const cardBg = draw.createLinearGradient(pad, statsY, pad + cardW, statsY + cardH, '#0b1220', '#0f172a');
+	draw.roundedRectFill(pad, statsY, cardW, cardH, 18, cardBg);
 
-	draw.ctx.beginPath();
-	draw.ctx.roundRect(pad, statsY, cardW, cardH, 18);
-	const cardBg = draw.ctx.createLinearGradient(pad, statsY, pad + cardW, statsY + cardH);
-	cardBg.addColorStop(0, '#0b1220');
-	cardBg.addColorStop(1, '#0f172a');
-	draw.ctx.fillStyle = cardBg;
-	draw.ctx.fill();
-	draw.ctx.textAlign = 'left';
-	draw.ctx.textBaseline = 'alphabetic';
-	draw.ctx.font = 'bold 26px DejaVuSans';
-	draw.ctx.fillStyle = '#cbd5e1';
-	draw.ctx.fillText(resumeLang.embed.fieldTotal(total), pad + 18, statsY + 40);
-	draw.ctx.fillText(resumeLang.embed.fieldAverage(Math.round(average)), pad + 18, statsY + 78);
+	draw.text(resumeLang.embed.fieldTotal(total), pad + 18, statsY + 36, '#cbd5e1', 26, 'left');
+	draw.text(resumeLang.embed.fieldAverage(Math.round(average)), pad + 18, statsY + 74, '#cbd5e1', 26, 'left');
 	if (opts.goal) {
-		draw.ctx.fillText(resumeLang.embed.fieldGoalReached(successDays), pad + 18, statsY + 116);
+		draw.text(resumeLang.embed.fieldGoalReached(successDays), pad + 18, statsY + 112, '#cbd5e1', 26, 'left');
 	}
 	if (opts.streak > 0) {
-		draw.ctx.fillText(resumeLang.embed.streak(opts.streak), pad + 18, statsY + 154);
+		draw.text(resumeLang.embed.streak(opts.streak), pad + 18, statsY + 150, '#cbd5e1', 26, 'left');
 	}
 
 	const gapLeftToChart = 24;
@@ -252,13 +247,8 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	const chartY = topPad;
 	const chartW = width - chartX - rightMargin;
 	const chartH = height - chartY - bottomMargin;
-	draw.ctx.beginPath();
-	draw.ctx.roundRect(chartX, chartY, chartW, chartH, 20);
-	const chartBg = draw.ctx.createLinearGradient(chartX, chartY, chartX + chartW, chartY + chartH);
-	chartBg.addColorStop(0, '#0b1220');
-	chartBg.addColorStop(1, '#0f172a');
-	draw.ctx.fillStyle = chartBg;
-	draw.ctx.fill();
+	const chartBg = draw.createLinearGradient(chartX, chartY, chartX + chartW, chartY + chartH, '#0b1220', '#0f172a');
+	draw.roundedRectFill(chartX, chartY, chartW, chartH, 20, chartBg);
 
 	const maxVal = Math.max(
 		opts.goal ?? 0,
@@ -276,39 +266,28 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	for (let i = 0; i < n; i++) {
 		const val = opts.days[i];
 
-		draw.ctx.fillStyle = '#111827';
-		const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
-		const by = innerY + innerH - h;
-		const bx = innerX + i * (barW + gap);
-		draw.ctx.beginPath();
-		draw.ctx.roundRect(bx, innerY, barW, innerH, 10);
-		draw.ctx.fill();
+		draw.roundedRectFill(innerX + i * (barW + gap), innerY, barW, innerH, 10, '#111827');
 
 		if (val) {
-			let g = draw.ctx.createLinearGradient(bx, by, bx, innerY + innerH);
-			if (opts.goal && val >= opts.goal) {
-				g.addColorStop(0, '#22c55e');
-				g.addColorStop(1, '#84cc16');
-			} else {
-				g.addColorStop(0, '#60a5fa');
-				g.addColorStop(1, '#c084fc');
-			}
-			draw.ctx.fillStyle = g;
-			draw.ctx.beginPath();
-			draw.ctx.roundRect(bx, by, barW, h, 10);
-			draw.ctx.fill();
+			const bx = innerX + i * (barW + gap);
+			const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
+			const by = innerY + innerH - h;
+			const topColor = opts.goal && val >= opts.goal ? '#22c55e' : '#60a5fa';
+			const bottomColor = opts.goal && val >= opts.goal ? '#84cc16' : '#c084fc';
+			const g = draw.createLinearGradient(bx, by, bx, innerY + innerH, topColor, bottomColor);
+			draw.roundedRectFill(bx, by, barW, h, 10, g);
+			draw.text(`${val}`, bx + barW / 2, by - 16, '#e5e7eb', 20);
+		} else {
+			const bx = innerX + i * (barW + gap);
+			const h = 0;
+			const by = innerY + innerH - h;
+			draw.text('-', bx + barW / 2, by - 16, '#e5e7eb', 20);
 		}
-		draw.ctx.fillStyle = '#e5e7eb';
-		draw.ctx.font = 'bold 20px DejaVuSans';
-		draw.ctx.textAlign = 'center';
-		draw.ctx.textBaseline = 'alphabetic';
-		draw.ctx.fillText(val !== null ? String(val) : '-', bx + barW / 2, by - 6);
+
+		const bx = innerX + i * (barW + gap);
 		const dayLabel = resumeLang.image.dayLetters[i] || '';
-		draw.ctx.fillStyle = '#94a3b8';
-		draw.ctx.font = '20px DejaVuSans';
-		draw.ctx.textBaseline = 'alphabetic';
-		const yLabel = chartY + chartH - 10;
-		draw.ctx.fillText(dayLabel, bx + barW / 2, yLabel);
+		const yLabel = chartY + chartH - 20;
+		draw.text(dayLabel, bx + barW / 2, yLabel, '#94a3b8', 20);
 	}
 	return draw.toBuffer();
 }
