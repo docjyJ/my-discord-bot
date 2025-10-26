@@ -1,16 +1,7 @@
-import {
-	ActionRowBuilder,
-	ChatInputCommandInteraction,
-	MessageFlags,
-	ModalBuilder,
-	ModalSubmitInteraction,
-	SlashCommandBuilder,
-	TextInputBuilder,
-	TextInputStyle,
-	User
-} from 'discord.js';
-import {getGoal, setGoal} from '../steps/storage';
+import {ChatInputCommandInteraction, SlashCommandBuilder, User} from 'discord.js';
+import {getGoal} from '../steps/storage';
 import {objectif} from '../lang';
+import {getObjectiveModal} from "../modals";
 
 export const commandName = 'objectif';
 
@@ -33,64 +24,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		return interaction.reply({content: objectif.replySelect.goal(targetUser.id, stepsGoal)});
 	}
 
-	const modal = await getModale(interaction.user.id);
-	await interaction.showModal(modal);
-}
-
-export async function getModale(userId: string) {
-	const {stepsGoal: current} = await getGoal(userId);
-	const modal = new ModalBuilder()
-		.setCustomId(objectif.ids.modalId)
-		.setTitle(objectif.modal.title);
-
-	const input = new TextInputBuilder()
-		.setCustomId('pas')
-		.setLabel(objectif.modal.stepLabel)
-		.setPlaceholder(objectif.modal.stepPlaceholder)
-		.setStyle(TextInputStyle.Short)
-		.setRequired(false);
-
-
-	if (current !== null) {
-		input.setValue(String(current));
-	}
-
-	modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-	return modal;
-}
-
-export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
-	if (interaction.customId !== objectif.ids.modalId) return;
-	const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
-	const {stepsGoal} = await getGoal(interaction.user.id);
-
-	if (rawStr === '') {
-		if (stepsGoal === null) {
-			return interaction.reply({
-				content: objectif.replyAction.noChange,
-				flags: MessageFlags.Ephemeral
-			});
-		}
-		await setGoal(interaction.user.id, {stepsGoal: null});
-		return interaction.reply({
-			content: objectif.replyAction.noGoal(interaction.user.id),
-		});
-	}
-
-	const raw = parseInt(rawStr, 10);
-	if (isNaN(raw) || raw < 0) {
-		return interaction.reply({content: objectif.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
-	}
-	if (stepsGoal === raw) {
-		return interaction.reply({
-			content: objectif.replyAction.noChange,
-			flags: MessageFlags.Ephemeral
-		});
-	}
-	await setGoal(interaction.user.id, {stepsGoal: raw});
-	return interaction.reply({
-		content: objectif.replyAction.goal(interaction.user.id, raw)
-	});
+	const modal = await getObjectiveModal(interaction.user.id);
+	return await interaction.showModal(modal);
 }
 
 export default {commandName, data, execute};

@@ -1,10 +1,5 @@
 import {PrismaClient} from '@prisma/client';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import DateTime from "../date-time";
 
 const prisma = new PrismaClient();
 
@@ -56,10 +51,10 @@ export async function listUsers(): Promise<string[]> {
 
 
 export async function getWeekSummary(userId: string, mondayISO: string) {
-	const monday = dayjs(mondayISO).tz('Europe/Paris');
+	const monday = DateTime.parse(mondayISO)!;
 	const dates: string[] = [];
 	for (let i = 0; i < 7; i++) {
-		dates.push(monday.add(i, 'day').format('YYYY-MM-DD'));
+		dates.push(monday.add(i).toISO());
 	}
 
 	const user = await prisma.user.findUnique({where: {id: userId}, select: {stepsGoal: true}});
@@ -105,14 +100,13 @@ export async function getStreak(userId: string, dateISO: string): Promise<number
 	const user = await prisma.user.findUnique({where: {id: userId}, select: {stepsGoal: true}});
 	const goal = user?.stepsGoal ?? null;
 	if (!goal || goal <= 0) return 0;
-	const zone = 'Europe/Paris';
-	const end = dayjs.tz(dateISO, zone);
-	if (!end.isValid()) return 0;
+	const end = DateTime.parse(dateISO);
+	if (end === null) return 0;
 	const windowDays = 60; // reasonable window
-	const start = end.subtract(windowDays - 1, 'day');
+	const start = end.subtract(windowDays - 1);
 	const dates: string[] = [];
 	for (let i = 0; i < windowDays; i++) {
-		dates.push(start.add(i, 'day').format('YYYY-MM-DD'));
+		dates.push(start.add(i).toISO());
 	}
 	const entries = await prisma.dailyEntry.findMany({
 		where: {userId, date: {in: dates}, steps: {not: null}},
@@ -121,7 +115,7 @@ export async function getStreak(userId: string, dateISO: string): Promise<number
 	const map = new Map<string, number>(entries.map(e => [e.date, e.steps as number]));
 	let streak = 0;
 	for (let i = 0; i < windowDays; i++) {
-		const d = end.subtract(i, 'day').format('YYYY-MM-DD');
+		const d = end.subtract(i).toISO();
 		const val = map.get(d);
 		if (val === undefined || val < goal) break;
 		streak++;

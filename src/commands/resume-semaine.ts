@@ -1,13 +1,8 @@
 import {AttachmentBuilder, ChatInputCommandInteraction, SlashCommandBuilder} from 'discord.js';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
 import {getStreak, getWeekSummary} from '../steps/storage';
 import {resumeSemaine as resumeLang} from '../lang';
 import {renderWeeklySummaryImage} from '../image/renderer';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import DateTime from "../date-time";
 
 export const commandName = 'resume-semaine';
 
@@ -19,21 +14,20 @@ export const data = new SlashCommandBuilder()
 	);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-	const lundiOpt = interaction.options.getString('lundi') || undefined;
-	const zone = 'Europe/Paris';
+	const lundiOpt = interaction.options.getString('lundi');
 	let monday;
 	if (lundiOpt) {
-		monday = dayjs.tz(lundiOpt, zone);
-		if (!monday.isValid()) {
+		monday = DateTime.parse(lundiOpt);
+		if (monday === null) {
 			return interaction.reply({content: resumeLang.replyAction.invalidMonday, ephemeral: true});
 		}
 	} else {
-		const now = dayjs().tz(zone);
-		monday = now.subtract(now.day() - 1, 'day').startOf('day');
+		monday = DateTime.now();
 	}
-	const mondayISO = monday.format('YYYY-MM-DD');
+	monday = monday.subtract(monday.weekDay() - 1)
+	const mondayISO = monday.toISO();
 	const {days, goal} = await getWeekSummary(interaction.user.id, mondayISO);
-	const sundayISO = monday.add(6, 'day').format('YYYY-MM-DD');
+	const sundayISO = monday.add(6).toISO();
 	const streak = await getStreak(interaction.user.id, sundayISO);
 
 	const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});

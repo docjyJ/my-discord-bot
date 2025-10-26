@@ -13,16 +13,10 @@ import {
 	shouldSendDailyPrompt,
 	shouldSendWeeklySummary
 } from './steps/storage';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-import {getModale as saisirGetModale, handleModalSubmit as saisirHandleModalSubmit} from './commands/saisir';
-import {handleModalSubmit as objectifHandleModalSubmit} from './commands/objectif';
 import {renderWeeklySummaryImage} from './image/renderer';
 import {lang, saisir as saisirLang} from './lang';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import {getSaisirModal, modalsExecutor} from "./modals";
+import DateTime from "./date-time";
 
 const client = new Client({
 	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages]
@@ -41,12 +35,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 	} else if (interaction.isButton()) {
 		if (interaction.customId.startsWith(saisirLang.ids.buttonPrefix)) {
 			const dateISO = interaction.customId.substring(saisirLang.ids.buttonPrefix.length);
-			const modal = await saisirGetModale(dateISO, interaction.user.id);
+			const modal = await getSaisirModal(dateISO, interaction.user.id);
 			await interaction.showModal(modal);
 		}
 	} else if (interaction.isModalSubmit()) {
-		await saisirHandleModalSubmit(interaction);
-		await objectifHandleModalSubmit(interaction);
+		const [id, ...rest] = interaction.customId.split('/');
+		const executor = modalsExecutor[id];
+		if (executor) await executor(interaction, rest);
 	}
 });
 
@@ -54,9 +49,8 @@ function startScheduler() {
 	setInterval(async () => {
 		console.log(lang.scheduler.schedulerTick, new Date().toISOString());
 		try {
-			const zone = 'Europe/Paris';
-			const now = dayjs().tz(zone);
-			const dateISO = now.format('YYYY-MM-DD');
+			const now = DateTime.now()
+			const dateISO = now.toISO();
 
 			if (now.hour() >= 19) {
 				if (await shouldSendDailyPrompt(dateISO)) {
@@ -65,10 +59,9 @@ function startScheduler() {
 				}
 			}
 
-			if (now.day() === 1 && now.hour() >= 8) { // lundi
-				const mondayCurrentWeek = now.startOf('day');
-				const mondayPrev = mondayCurrentWeek.subtract(7, 'day');
-				const mondayPrevISO = mondayPrev.format('YYYY-MM-DD');
+			if (now.weekDay() === 1 && now.hour() >= 8) {
+				const mondayPrev = now.subtract(7);
+				const mondayPrevISO = mondayPrev.toISO();
 				if (await shouldSendWeeklySummary(mondayPrevISO)) {
 					await sendWeeklySummaries(mondayPrevISO);
 					await markWeeklySummary(mondayPrevISO);
@@ -81,7 +74,7 @@ function startScheduler() {
 	}, 60 * 1000);
 }
 
-async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
+async function sendDailyPrompts(dateISO: string, now: DateTime) {
 	console.log(lang.scheduler.sendingRemindersFor, dateISO);
 	const users = await listUsers();
 	const notFilled: string[] = [];
@@ -98,8 +91,8 @@ async function sendDailyPrompts(dateISO: string, now: dayjs.Dayjs) {
 	const textChannel = channelFetched as TextChannel;
 	await textChannel.send({
 		content: notFilled.length > 1
-			? lang.scheduler.dailyPromptMessage(now.format('HH:mm'), notFilled, dateISO)
-			: lang.scheduler.dailyPromptMessageSingle(now.format('HH:mm'), notFilled[0], dateISO),
+			? lang.scheduler.dailyPromptMessage(now.toTime(), notFilled, dateISO)
+			: lang.scheduler.dailyPromptMessageSingle(now.toTime(), notFilled[0], dateISO),
 		components: [
 			new ActionRowBuilder<ButtonBuilder>().addComponents(
 				new ButtonBuilder()
@@ -122,11 +115,10 @@ async function sendWeeklySummaries(mondayISO: string) {
 			const {days, goal} = await getWeekSummary(userId, mondayISO);
 			if ((goal ?? 0) === 0 && days.every(d => (d ?? 0) === 0)) continue;
 
-			// Fetch user to get username and avatar
 			const user = await client.users.fetch(userId);
 			const avatarUrl = user.displayAvatarURL({extension: 'png', size: 512});
 
-			const sundayISO = dayjs(mondayISO).add(6, 'day').format('YYYY-MM-DD');
+			const sundayISO = DateTime.parse(mondayISO)!.add(6).toISO();
 			const streak = await getStreak(userId, sundayISO);
 
 			const img = await renderWeeklySummaryImage({avatarUrl, mondayISO, days, goal, streak});

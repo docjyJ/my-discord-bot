@@ -42,9 +42,6 @@ export const objectif = {
 		stepLabel: 'Objectif de pas par jour',
 		stepPlaceholder: '8000',
 	},
-	ids: {
-		modalId: 'objectif-modal',
-	},
 	replyAction: {
 		noGoal: (userId: string) => `<@${userId}> a supprimé son objectif.`,
 		noChange: 'Tu n\'as pas changé ton objectif.',
@@ -68,7 +65,6 @@ export const saisir = {
 		stepPlaceholder: '7800',
 	},
 	ids: {
-		modalPrefix: 'saisir-modal-',
 		buttonPrefix: 'saisir-btn-',
 	},
 	button: {
