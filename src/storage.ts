@@ -1,7 +1,11 @@
 import {PrismaClient} from '@prisma/client';
-import DateTime from "../date-time";
+import DateTime from "./date-time";
 
 const prisma = new PrismaClient();
+
+function upsertMeta(key: string, value: string) {
+	return prisma.meta.upsert({where: {key}, update: {value}, create: {key, value}});
+}
 
 export async function setGoal(userId: string, data: { stepsGoal: number | null }) {
 	await prisma.user.upsert({
@@ -11,7 +15,8 @@ export async function setGoal(userId: string, data: { stepsGoal: number | null }
 	});
 }
 
-export async function setEntry(userId: string, date: string, data: { steps: number | null }) {
+export async function setEntry(userId: string, dateObj: DateTime, data: { steps: number | null }) {
+	const date = dateObj.toDateString();
 	await prisma.dailyEntry.upsert({
 		where: {userId_date: {userId, date}},
 		update: data,
@@ -37,9 +42,9 @@ export async function getGoal(userId: string) {
 	)
 }
 
-export async function getEntry(userId: string, dateISO: string) {
+export async function getEntry(userId: string, date: DateTime) {
 	return prisma.dailyEntry.findUnique({
-		where: {userId_date: {userId, date: dateISO}},
+		where: {userId_date: {userId, date: date.toDateString()}},
 		select: {steps: true}
 	}).then(e => (e ?? {steps: null}));
 }
@@ -50,11 +55,10 @@ export async function listUsers(): Promise<string[]> {
 }
 
 
-export async function getWeekSummary(userId: string, mondayISO: string) {
-	const monday = DateTime.parse(mondayISO)!;
+export async function getWeekSummary(userId: string, monday: DateTime) {
 	const dates: string[] = [];
 	for (let i = 0; i < 7; i++) {
-		dates.push(monday.add(i).toISO());
+		dates.push(monday.addDay(i).toDateString());
 	}
 
 	const user = await prisma.user.findUnique({where: {id: userId}, select: {stepsGoal: true}});
@@ -69,44 +73,33 @@ export async function getWeekSummary(userId: string, mondayISO: string) {
 	return {days, goal};
 }
 
-export async function shouldSendDailyPrompt(dateISO: string): Promise<boolean> {
+export async function shouldSendDailyPrompt(date: DateTime): Promise<boolean> {
 	const meta = await prisma.meta.findUnique({where: {key: 'lastDailyPrompt'}});
-	return meta?.value !== dateISO;
+	return meta?.value !== date.toDateString();
 }
 
-export async function markDailyPrompt(dateISO: string) {
-	await prisma.meta.upsert({
-		where: {key: 'lastDailyPrompt'},
-		update: {value: dateISO},
-		create: {key: 'lastDailyPrompt', value: dateISO}
-	});
+export async function markDailyPrompt(date: DateTime) {
+	await upsertMeta('lastDailyPrompt', date.toDateString());
 }
 
-export async function shouldSendWeeklySummary(mondayISO: string): Promise<boolean> {
+export async function shouldSendWeeklySummary(monday: DateTime): Promise<boolean> {
 	const meta = await prisma.meta.findUnique({where: {key: 'lastWeeklySummaryMonday'}});
-	return meta?.value !== mondayISO;
+	return meta?.value !== monday.toDateString();
 }
 
-export async function markWeeklySummary(mondayISO: string) {
-	await prisma.meta.upsert({
-		where: {key: 'lastWeeklySummaryMonday'},
-		update: {value: mondayISO},
-		create: {key: 'lastWeeklySummaryMonday', value: mondayISO}
-	});
+export async function markWeeklySummary(monday: DateTime) {
+	await upsertMeta('lastWeeklySummaryMonday', monday.toDateString());
 }
 
-// Compute current success streak (consecutive days reaching goal) up to and including dateISO
-export async function getStreak(userId: string, dateISO: string): Promise<number> {
+export async function getStreak(userId: string, end: DateTime): Promise<number> {
 	const user = await prisma.user.findUnique({where: {id: userId}, select: {stepsGoal: true}});
 	const goal = user?.stepsGoal ?? null;
 	if (!goal || goal <= 0) return 0;
-	const end = DateTime.parse(dateISO);
-	if (end === null) return 0;
-	const windowDays = 60; // reasonable window
-	const start = end.subtract(windowDays - 1);
+	const windowDays = 60;
+	const start = end.addDay(1 - windowDays);
 	const dates: string[] = [];
 	for (let i = 0; i < windowDays; i++) {
-		dates.push(start.add(i).toISO());
+		dates.push(start.addDay(i).toDateString());
 	}
 	const entries = await prisma.dailyEntry.findMany({
 		where: {userId, date: {in: dates}, steps: {not: null}},
@@ -115,7 +108,7 @@ export async function getStreak(userId: string, dateISO: string): Promise<number
 	const map = new Map<string, number>(entries.map(e => [e.date, e.steps as number]));
 	let streak = 0;
 	for (let i = 0; i < windowDays; i++) {
-		const d = end.subtract(i).toISO();
+		const d = end.addDay(-i).toDateString();
 		const val = map.get(d);
 		if (val === undefined || val < goal) break;
 		streak++;

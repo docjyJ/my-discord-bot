@@ -6,9 +6,11 @@ export default class DateTime {
 	private constructor(date: Date) {
 		this.date = date;
 	}
+
 	static now() {
 		return new DateTime(new Date());
 	}
+
 	static parse(dateStr: string) {
 		const int = Date.parse(dateStr);
 		if (isNaN(int)) {
@@ -17,11 +19,7 @@ export default class DateTime {
 		return new DateTime(new Date(int));
 	}
 
-	subtract(value: number) {
-		return new DateTime(new Date(this.date.getTime() - value * DAY_LENGTH));
-	}
-
-	add(value: number) {
+	addDay(value: number) {
 		return new DateTime(new Date(this.date.getTime() + value * DAY_LENGTH));
 	}
 
@@ -33,11 +31,33 @@ export default class DateTime {
 		return this.date.getUTCHours();
 	}
 
-	toISO() {
-		return this.date.toISOString().substring(0, 10);
+	toDateString() {
+		const day = this.date.getDate().toString().padStart(2, '0');
+		const month = (this.date.getMonth() + 1).toString().padStart(2, '0');
+		const year = this.date.getFullYear().toString().padStart(4, '0');
+		return `${year}-${month}-${day}`;
 	}
 
-	toTime() {
-		return this.date.toISOString().substring(11, 16);
+	toTimeString() {
+		const hours = this.date.getHours().toString().padStart(2, '0')
+		const minutes = this.date.getMinutes().toString().padStart(2, '0')
+		return `${hours}:${minutes}`;
+	}
+
+	fullLocalDate(locale: string) {
+		return this.date.toLocaleDateString(locale, {
+			weekday: 'long',
+			day: '2-digit',
+			month: 'long',
+			year: 'numeric'
+		})
+	}
+
+	shortLocalDate(locale: string, withYear = false) {
+		return this.date.toLocaleDateString(locale, {
+			day: '2-digit',
+			month: 'long',
+			...(withYear ? {year: 'numeric'} : {})
+		})
 	}
 }

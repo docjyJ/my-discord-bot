@@ -1,4 +1,4 @@
-import {getGoal, setGoal} from "../steps/storage";
+import {getGoal, setGoal} from "../storage";
 import {
 	ActionRowBuilder,
 	MessageFlags,

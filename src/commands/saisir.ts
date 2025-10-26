@@ -1,4 +1,4 @@
-import {ChatInputCommandInteraction, SlashCommandBuilder} from 'discord.js';
+import {ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import {saisir} from '../lang';
 import DateTime from "../date-time";
 import {getSaisirModal} from "../modals";
@@ -15,7 +15,9 @@ export const data = new SlashCommandBuilder()
 	);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-	const jour = interaction.options.getString('jour') || DateTime.now().toISO();
+	const jourString = interaction.options.getString('jour');
+	const jour = jourString ? DateTime.parse(jourString) : DateTime.now();
+	if (!jour) return await interaction.reply({content: saisir.replyAction.invalidDate, flags: MessageFlags.Ephemeral});
 	const modal = await getSaisirModal(jour, interaction.user.id);
 	return await interaction.showModal(modal);
 }

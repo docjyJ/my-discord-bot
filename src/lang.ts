@@ -1,29 +1,22 @@
-function formatDate(date: string): string {
-	const d = new Date(date);
-	if (isNaN(d.getTime())) return 'Date invalide';
-	return d.toLocaleDateString('fr-FR', {
-		weekday: 'long',
-		day: '2-digit',
-		month: 'long',
-		year: 'numeric'
-	});
-}
+import DateTime from "./date-time";
+
+const fr = 'fr-FR';
 
 export const lang = {
 	scheduler: {
 		ready: 'Discord bot is ready! 🤖',
-		schedulerTick: 'Scheduler tick',
+		schedulerTick: (date: DateTime) => `Tick du scheduler du ${date.fullLocalDate(fr)} à ${date.toTimeString()}`,
 		schedulerEndTick: 'Fin du tick',
 		schedulerError: 'Scheduler error',
-		sendingRemindersFor: 'Envoi des rappels pour',
+		sendingRemindersFor: (date: DateTime) => `Envoi des rappels pour le ${date.fullLocalDate(fr)}`,
 		reminderChannel: 'Canal de rappel:',
-		dailyPromptMessage: (time: string, userIds: string[], dateISO: string) =>
-			`Il est ${time}. <@${userIds.join('> <@')}>, vous n'avez pas encore saisi vos pas du ${formatDate(dateISO)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
-		dailyPromptMessageSingle: (time: string, userId: string, dateISO: string) =>
-			`Il est ${time}. <@${userId}>, tu n'as pas encore saisi tes pas du ${formatDate(dateISO)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
+		dailyPromptMessage: (time: string, userIds: string[], date: DateTime) =>
+			`Il est ${time}. <@${userIds.join('> <@')}>, vous n'avez pas encore saisi vos pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
+		dailyPromptMessageSingle: (time: string, userId: string, date: DateTime) =>
+			`Il est ${time}. <@${userId}>, tu n'as pas encore saisi tes pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
 		weeklySummarySendError: "Impossible d'envoyer le résumé pour",
 		connected: 'Connecté',
-		weeklySummaryMessage: (userId: string, mondayISO: string) => `<@${userId}>, voici ton résumé pour la semaine du ${formatDate(mondayISO)}.`,
+		weeklySummaryMessage: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`,
 	},
 	deploy: {
 		start: 'Synchronisation complète des commandes (/)...',
@@ -60,7 +53,7 @@ export const saisir = {
 		optionJourDescription: "Date AAAA-MM-JJ (optionnel, défaut: aujourd'hui Europe/Paris)",
 	},
 	modal: {
-		title: (dateISO: string) => `Saisir les pas pour ${formatDate(dateISO)}`,
+		title: (date: DateTime) => `Saisir les pas pour ${date.fullLocalDate(fr)}`,
 		stepLabel: 'Nombre de pas',
 		stepPlaceholder: '7800',
 	},
@@ -72,13 +65,13 @@ export const saisir = {
 	},
 	replyAction: {
 		invalidDate: 'Date invalide. Format attendu AAAA-MM-JJ.',
-		entryDeleted: (userId: string, dateISO: string) => `<@${userId}> a supprimé sa saisie pour le ${formatDate(dateISO)}.`,
-		noChange: (dateISO: string) => `Tu n'a pas changé ta saisie pour le ${formatDate(dateISO)}.`,
+		entryDeleted: (userId: string, date: DateTime) => `<@${userId}> a supprimé sa saisie pour le ${date.fullLocalDate(fr)}.`,
+		noChange: (date: DateTime) => `Tu n'a pas changé ta saisie pour le ${date.fullLocalDate(fr)}.`,
 		invalidValue: 'Valeur invalide: entrer un entier >= 0.',
-		saved: (userId: string, dateISO: string) => `<@${userId}> a enregistré ses pas pour le ${formatDate(dateISO)}.`,
+		saved: (userId: string, date: DateTime) => `<@${userId}> a enregistré ses pas pour le ${date.fullLocalDate(fr)}.`,
 	},
 	image: {
-		dateTitle: (dateISO: string) => formatDate(dateISO),
+		dateTitle: (date: DateTime) => date.fullLocalDate(fr),
 		streak: (days: number) => (days === 1 ? '1 jour' : `${days} jours`),
 		reached: 'Félicitations, tu as atteint ton objectif.',
 		remaining: (remaining: number) => `Il te reste ${remaining} pas pour atteindre ton objectif.`,
@@ -99,19 +92,10 @@ export const resumeSemaine = {
 	},
 	replyAction: {
 		invalidMonday: 'Date du lundi invalide.',
-		message: (userId: string, mondayISO: string) => `<@${userId}>, voici ton résumé pour la semaine du ${formatDate(mondayISO)}.`,
+		message: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`,
 	},
 	image: {
 		dayLetters: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-		title: (mondayISO: string) => {
-			const d = new Date(mondayISO);
-			if (isNaN(d.getTime())) return 'Semaine';
-			const sunday = new Date(d);
-			sunday.setDate(d.getDate() + 6);
-			const fmt = (x: Date, withYear = false) => x.toLocaleDateString('fr-FR', {
-				day: 'numeric', month: 'long', ...(withYear ? {year: 'numeric'} : {})
-			});
-			return `Semaine de ${fmt(d)} au ${fmt(sunday, true)}`;
-		}
+		title: (monday: DateTime) => `Semaine du ${monday.shortLocalDate(fr)} au ${monday.addDay(6).shortLocalDate(fr, true)}`
 	}
 };

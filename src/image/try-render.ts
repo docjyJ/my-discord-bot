@@ -1,11 +1,12 @@
 import {writeFileSync} from 'fs';
 import {renderPresentationImage} from './renderer';
+import DateTime from "../date-time";
 
 async function main() {
 	const buf = await renderPresentationImage({
 		username: '@tester',
 		avatarUrl: 'https://www.slate.fr/uploads/store/drupal_slate/train_1.jpg',
-		dateISO: '2025-10-25',
+		date: DateTime.parse('2025-10-25')!,
 		steps: 5300,
 		goal: 8000,
 		streak: 3,

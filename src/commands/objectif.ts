@@ -1,5 +1,5 @@
 import {ChatInputCommandInteraction, SlashCommandBuilder, User} from 'discord.js';
-import {getGoal} from '../steps/storage';
+import {getGoal} from '../storage';
 import {objectif} from '../lang';
 import {getObjectiveModal} from "../modals";
 

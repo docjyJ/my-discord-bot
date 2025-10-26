@@ -1,5 +1,5 @@
 import {AttachmentBuilder, ChatInputCommandInteraction, SlashCommandBuilder} from 'discord.js';
-import {getStreak, getWeekSummary} from '../steps/storage';
+import {getStreak, getWeekSummary} from '../storage';
 import {resumeSemaine as resumeLang} from '../lang';
 import {renderWeeklySummaryImage} from '../image/renderer';
 import DateTime from "../date-time";
@@ -24,18 +24,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	} else {
 		monday = DateTime.now();
 	}
-	monday = monday.subtract(monday.weekDay() - 1)
-	const mondayISO = monday.toISO();
-	const {days, goal} = await getWeekSummary(interaction.user.id, mondayISO);
-	const sundayISO = monday.add(6).toISO();
-	const streak = await getStreak(interaction.user.id, sundayISO);
+	monday = monday.addDay(1-monday.weekDay())
+	const {days, goal} = await getWeekSummary(interaction.user.id, monday);
+	const streak = await getStreak(interaction.user.id, monday.addDay(6));
 
 	const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
-	const img = await renderWeeklySummaryImage({avatarUrl, mondayISO, days, goal, streak});
+	const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});
 
 	return interaction.reply({
-		content: resumeLang.replyAction.message(interaction.user.id, mondayISO),
-		files: [new AttachmentBuilder(img, {name: `weekly-${interaction.user.id}-${mondayISO}.png`})]
+		content: resumeLang.replyAction.message(interaction.user.id, monday),
+		files: [new AttachmentBuilder(img, {name: `weekly-${interaction.user.id}-${monday.toDateString()}.png`})]
 	});
 }
 

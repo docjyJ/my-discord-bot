@@ -1,10 +1,11 @@
 import {resumeSemaine as resumeLang, saisir} from '../lang';
 import Draw, {downloadImage} from "./draw";
+import DateTime from "../date-time";
 
 export type PresentationOptions = {
 	username: string;
 	avatarUrl: string;
-	dateISO: string;
+	date: DateTime;
 	steps: number;
 	goal: number | null;
 	streak: number;
@@ -22,7 +23,7 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 
 	const draw = new Draw(1200, 630);
 
-	draw.text(saisir.image.dateTitle(opts.dateISO), width / 2, 50, '#f8fafc', 44);
+	draw.text(saisir.image.dateTitle(opts.date), width / 2, 50, '#f8fafc', 44);
 
 
 	const left_x = 0.3 * width;
@@ -79,7 +80,7 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 
 export type WeeklySummaryProps = {
 	avatarUrl: string;
-	mondayISO: string;
+	monday: DateTime;
 	goal: number | null;
 	days: (number | null)[];
 	streak: number;
@@ -97,7 +98,7 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 
 	const draw = new Draw(width, height);
 
-	const title = resumeLang.image.title(opts.mondayISO);
+	const title = resumeLang.image.title(opts.monday);
 
 	draw.text(title, width / 2, 40, '#f8fafc', 42);
 

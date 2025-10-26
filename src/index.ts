@@ -12,7 +12,7 @@ import {
 	markWeeklySummary,
 	shouldSendDailyPrompt,
 	shouldSendWeeklySummary
-} from './steps/storage';
+} from './storage';
 import {renderWeeklySummaryImage} from './image/renderer';
 import {lang, saisir as saisirLang} from './lang';
 import {getSaisirModal, modalsExecutor} from "./modals";
@@ -35,7 +35,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 	} else if (interaction.isButton()) {
 		if (interaction.customId.startsWith(saisirLang.ids.buttonPrefix)) {
 			const dateISO = interaction.customId.substring(saisirLang.ids.buttonPrefix.length);
-			const modal = await getSaisirModal(dateISO, interaction.user.id);
+			const modal = await getSaisirModal(DateTime.parse(dateISO)!, interaction.user.id);
 			await interaction.showModal(modal);
 		}
 	} else if (interaction.isModalSubmit()) {
@@ -46,28 +46,26 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 let schedulerRunning = false;
+
 function startScheduler() {
 	setInterval(async () => {
 		if (schedulerRunning) return; // éviter les overlaps
 		schedulerRunning = true;
-		console.log(lang.scheduler.schedulerTick, new Date().toISOString());
+		const now = DateTime.now()
+		console.log(lang.scheduler.schedulerTick(now));
 		try {
-			const now = DateTime.now()
-			const dateISO = now.toISO();
-
 			if (now.hour() >= 19) {
-				if (await shouldSendDailyPrompt(dateISO)) {
-					await sendDailyPrompts(dateISO, now);
-					await markDailyPrompt(dateISO);
+				if (await shouldSendDailyPrompt(now)) {
+					await sendDailyPrompts(now);
+					await markDailyPrompt(now);
 				}
 			}
 
 			if (now.weekDay() === 1 && now.hour() >= 8) {
-				const mondayPrev = now.subtract(7);
-				const mondayPrevISO = mondayPrev.toISO();
-				if (await shouldSendWeeklySummary(mondayPrevISO)) {
-					await sendWeeklySummaries(mondayPrevISO);
-					await markWeeklySummary(mondayPrevISO);
+				const mondayPrev = now.addDay(-7);
+				if (await shouldSendWeeklySummary(mondayPrev)) {
+					await sendWeeklySummaries(mondayPrev);
+					await markWeeklySummary(mondayPrev);
 				}
 			}
 		} catch (e) {
@@ -79,14 +77,14 @@ function startScheduler() {
 	}, 60 * 1000);
 }
 
-async function sendDailyPrompts(dateISO: string, now: DateTime) {
-	console.log(lang.scheduler.sendingRemindersFor, dateISO);
+async function sendDailyPrompts(now: DateTime) {
+	console.log(lang.scheduler.sendingRemindersFor(now));
 	const users = await listUsers();
 	const notFilled: string[] = [];
 	for (const userId of users) {
 		const {stepsGoal} = await getGoal(userId);
-		if (!stepsGoal || stepsGoal === 0) continue; // ignorer sans objectif
-		const {steps} = await getEntry(userId, dateISO);
+		if (!stepsGoal || stepsGoal === 0) continue;
+		const {steps} = await getEntry(userId, now);
 		if (steps === null) notFilled.push(userId);
 	}
 	if (notFilled.length === 0) return;
@@ -96,12 +94,12 @@ async function sendDailyPrompts(dateISO: string, now: DateTime) {
 	const textChannel = channelFetched as TextChannel;
 	await textChannel.send({
 		content: notFilled.length > 1
-			? lang.scheduler.dailyPromptMessage(now.toTime(), notFilled, dateISO)
-			: lang.scheduler.dailyPromptMessageSingle(now.toTime(), notFilled[0], dateISO),
+			? lang.scheduler.dailyPromptMessage(now.toTimeString(), notFilled, now)
+			: lang.scheduler.dailyPromptMessageSingle(now.toTimeString(), notFilled[0], now),
 		components: [
 			new ActionRowBuilder<ButtonBuilder>().addComponents(
 				new ButtonBuilder()
-					.setCustomId(`${saisirLang.ids.buttonPrefix}${dateISO}`)
+					.setCustomId(`${saisirLang.ids.buttonPrefix}${now.toDateString()}`)
 					.setLabel(saisirLang.button.label)
 					.setStyle(ButtonStyle.Primary)
 			)
@@ -109,7 +107,7 @@ async function sendDailyPrompts(dateISO: string, now: DateTime) {
 	});
 }
 
-async function sendWeeklySummaries(mondayISO: string) {
+async function sendWeeklySummaries(monday: DateTime) {
 	const channelFetched = await client.channels.fetch(channelId);
 	if (!channelFetched || !channelFetched.isTextBased()) return;
 	const textChannel = channelFetched as TextChannel;
@@ -117,20 +115,19 @@ async function sendWeeklySummaries(mondayISO: string) {
 	const users = await listUsers();
 	for (const userId of users) {
 		try {
-			const {days, goal} = await getWeekSummary(userId, mondayISO);
+			const {days, goal} = await getWeekSummary(userId, monday);
 			if ((goal ?? 0) === 0 && days.every(d => (d ?? 0) === 0)) continue;
 
 			const user = await client.users.fetch(userId);
 			const avatarUrl = user.displayAvatarURL({extension: 'png', size: 512});
 
-			const sundayISO = DateTime.parse(mondayISO)!.add(6).toISO();
-			const streak = await getStreak(userId, sundayISO);
+			const streak = await getStreak(userId, monday.addDay(6));
 
-			const img = await renderWeeklySummaryImage({avatarUrl, mondayISO, days, goal, streak});
+			const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});
 
 			await textChannel.send({
-				content: lang.scheduler.weeklySummaryMessage(userId, mondayISO),
-				files: [{attachment: img, name: `weekly-${userId}-${mondayISO}.png`}]
+				content: lang.scheduler.weeklySummaryMessage(userId, monday),
+				files: [{attachment: img, name: `weekly-${userId}-${monday.toDateString()}.png`}]
 			});
 		} catch (e) {
 			console.warn(lang.scheduler.weeklySummarySendError, userId, e);
