@@ -1,4 +1,4 @@
-import {createCanvas, GlobalFonts, loadImage} from '@napi-rs/canvas';
+import {createCanvas, GlobalFonts, Image, loadImage, SKRSContext2D} from '@napi-rs/canvas';
 import 'dayjs/locale/fr';
 import {resumeSemaine as resumeLang, saisir} from '../lang';
 
@@ -13,6 +13,9 @@ export type PresentationOptions = {
 	streak: number;
 };
 
+const PI_2 = Math.PI * 2;
+const PI_1_2 = Math.PI / 2;
+
 export type WeeklySummaryProps = {
 	avatarUrl: string;
 	mondayISO: string;
@@ -21,150 +24,107 @@ export type WeeklySummaryProps = {
 	streak: number;
 };
 
-export async function renderPresentationImage(opts: PresentationOptions): Promise<Buffer> {
+type BackgroundProps = {
+	ctx: SKRSContext2D;
+	s: { w: number; h: number };
+	c1: { x: number; y: number; r: number };
+	c2: { x: number; y: number; r: number };
+}
 
-	const hasGoal = opts.goal !== null && opts.goal > 0;
-	const goal = hasGoal ? Math.max(0, opts.goal as number) : 0;
-	const progress = hasGoal ? Math.min(0.98, Math.max(0, opts.steps / goal)) : 0;
-	const reached = hasGoal && opts.steps >= goal;
-
-	const width = 1200;
-	const height = 630;
-	const canvas = createCanvas(width, height);
-	const ctx = canvas.getContext('2d');
-
-	const grad = ctx.createLinearGradient(0, 0, width, height);
+function fillBackground({ctx, s, c1, c2}: BackgroundProps) {
+	const grad = ctx.createLinearGradient(0, 0, s.w, s.h);
 	grad.addColorStop(0, '#0a0f1f');
 	grad.addColorStop(1, '#1f3b73');
 	ctx.fillStyle = grad;
-	ctx.fillRect(0, 0, width, height);
-
+	ctx.fillRect(0, 0, s.w, s.h);
 	ctx.globalAlpha = 0.12;
 	ctx.fillStyle = '#6ee7b7';
 	ctx.beginPath();
-	ctx.arc(width * 0.1, height * 0.22, 160, 0, Math.PI * 2);
+	ctx.arc(c1.x, c1.y, c1.r, 0, PI_2);
 	ctx.fill();
 	ctx.fillStyle = '#93c5fd';
 	ctx.beginPath();
-	ctx.arc(width * 0.9, height * 0.87, 200, 0, Math.PI * 2);
+	ctx.arc(c2.x, c2.y, c2.r, 0, PI_2);
 	ctx.fill();
 	ctx.globalAlpha = 1;
+}
 
-	ctx.fillStyle = '#f8fafc';
-	ctx.font = 'bold 44px DejaVuSans';
-	ctx.textAlign = 'center';
-	ctx.textBaseline = 'alphabetic';
-	ctx.fillText(saisir.image.dateTitle(opts.dateISO), width / 2, 72);
-
-	const circleRadius = 210;
-	const leftCenter = {x: width * 0.3, y: height * 0.52};
-	const rightCenter = {x: width * 0.7, y: height * 0.52};
-
-	const ARC_OFFSET = 16;
-	const ARC_WIDTH = 22;
-	const PROGRESS_BG_INNER = '#0b1220';
-	const PROGRESS_BG_OUTER = '#0f172a';
-
-
-	const avatarBgGrad = ctx.createLinearGradient(
-		leftCenter.x - circleRadius,
-		leftCenter.y - circleRadius,
-		leftCenter.x + circleRadius,
-		leftCenter.y + circleRadius
-	);
-	avatarBgGrad.addColorStop(0, PROGRESS_BG_INNER);
-	avatarBgGrad.addColorStop(1, PROGRESS_BG_OUTER);
+function drawBackgroundCircle(ctx: SKRSContext2D, x: number, y: number, radius: number) {
+	const grad = ctx.createLinearGradient(x - radius, y - radius, x + radius, y + radius);
+	grad.addColorStop(0, '#0b1220');
+	grad.addColorStop(1, '#0f172a');
 	ctx.beginPath();
-	ctx.arc(leftCenter.x, leftCenter.y, circleRadius, 0, Math.PI * 2);
-	ctx.closePath();
-	ctx.fillStyle = avatarBgGrad;
+	ctx.arc(x, y, radius, 0, PI_2);
+	ctx.fillStyle = grad;
 	ctx.fill();
-
-	const INNER_PADDING = 5;
-	const innerRadius = circleRadius - INNER_PADDING;
-	const img = await loadImage(opts.avatarUrl);
 	ctx.save();
+}
+
+function drawAvatar(ctx: SKRSContext2D, x: number, y: number, radius: number, image: Image) {
 	ctx.beginPath();
-	ctx.arc(leftCenter.x, leftCenter.y, innerRadius, 0, Math.PI * 2);
-	ctx.closePath();
+	ctx.arc(x, y, radius, 0, PI_2);
 	ctx.clip();
-
-	const scale = Math.max((innerRadius * 2) / img.width, (innerRadius * 2) / img.height);
-	const w = img.width * scale;
-	const h = img.height * scale;
-	ctx.drawImage(img, leftCenter.x - w / 2, leftCenter.y - h / 2, w, h);
-
+	const scale = radius / Math.min(image.width, image.height);
+	const w = image.width * scale;
+	const h = image.height * scale;
+	ctx.drawImage(image, x - w, y - h, w * 2, h * 2);
 	ctx.restore();
+}
 
-	ctx.save();
-	const progressBgGrad = ctx.createLinearGradient(
-		rightCenter.x - circleRadius,
-		rightCenter.y - circleRadius,
-		rightCenter.x + circleRadius,
-		rightCenter.y + circleRadius
-	);
-	progressBgGrad.addColorStop(0, PROGRESS_BG_INNER);
-	progressBgGrad.addColorStop(1, PROGRESS_BG_OUTER);
-	ctx.beginPath();
-	ctx.arc(rightCenter.x, rightCenter.y, circleRadius, 0, Math.PI * 2);
-	ctx.closePath();
-	ctx.fillStyle = progressBgGrad;
-	ctx.fill();
+function drawStepWidget(ctx: SKRSContext2D, x: number, y: number, radius: number, width: number, steps: number, goal: number, streak: number) {
+	const progress = goal !== 0 && steps !== 0 ? goal > steps ? steps / goal * 0.96 + 0.2 : 1 : 0;
 
 	ctx.strokeStyle = '#1f2937';
-	ctx.lineWidth = ARC_WIDTH;
+	ctx.lineWidth = width;
 	ctx.beginPath();
-	ctx.arc(rightCenter.x, rightCenter.y, circleRadius - ARC_OFFSET, 0, Math.PI * 2);
+	ctx.arc(x, y, radius, 0, PI_2);
 	ctx.stroke();
 
-	if (reached) {
-		const arcGrad = ctx.createLinearGradient(rightCenter.x - circleRadius, rightCenter.y, rightCenter.x + circleRadius, rightCenter.y);
+	if (progress === 1) {
+		const prevCap = ctx.lineCap;
+		const arcGrad = ctx.createLinearGradient(x - radius, y, x + radius, y);
 		arcGrad.addColorStop(0, '#22c55e');
 		arcGrad.addColorStop(1, '#84cc16');
 		ctx.strokeStyle = arcGrad;
-		const prevCap = ctx.lineCap;
 		ctx.lineCap = 'butt';
 		ctx.beginPath();
-		ctx.arc(rightCenter.x, rightCenter.y, circleRadius - ARC_OFFSET, 0, Math.PI * 2);
+		ctx.arc(x, y, radius, 0, PI_2);
 		ctx.stroke();
 		ctx.lineCap = prevCap;
-	} else if (progress > 0) {
-		const arcGrad = ctx.createLinearGradient(rightCenter.x - circleRadius, rightCenter.y, rightCenter.x + circleRadius, rightCenter.y);
+	} else if (progress !== 0) {
+		const prevCap = ctx.lineCap;
+		const arcGrad = ctx.createLinearGradient(x - radius, y, x + radius, y);
 		arcGrad.addColorStop(0, '#60a5fa');
 		arcGrad.addColorStop(1, '#c084fc');
 		ctx.strokeStyle = arcGrad;
-		const prevCap = ctx.lineCap;
 		ctx.lineCap = 'round';
 		ctx.beginPath();
-		const start = -Math.PI / 2;
-		const end = start + progress * Math.PI * 2;
-		ctx.arc(rightCenter.x, rightCenter.y, circleRadius - ARC_OFFSET, start, end);
+		ctx.arc(x, y, radius, -PI_1_2, progress * PI_2 - PI_1_2);
 		ctx.stroke();
 		ctx.lineCap = prevCap;
 	}
 
-	const GOAL_LINE_OFFSET = 45;
-	let mainY = rightCenter.y;
-	if (hasGoal) {
-		mainY = rightCenter.y - GOAL_LINE_OFFSET + (80 - 34) / 2;
+	let mainY = y;
+	if (goal !== null) {
+		mainY = y - 45 + (80 - 34) / 2;
 	}
 
 	ctx.fillStyle = '#e5e7eb';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.font = 'bold 80px DejaVuSans';
-	ctx.fillText(`${opts.steps}`, rightCenter.x, mainY);
+	ctx.fillText(`${steps}`, x, mainY);
 
-	if (hasGoal) {
+	if (goal !== 0) {
 		ctx.font = 'bold 34px DejaVuSans';
 		ctx.fillStyle = '#94a3b8';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText(`/ ${goal}`, rightCenter.x, rightCenter.y + GOAL_LINE_OFFSET);
+		ctx.fillText(`/ ${goal}`, x, y + 45);
 	}
 
-	if (reached && opts.streak > 0) {
-		const badgeX = rightCenter.x + circleRadius - 36;
-		const badgeY = rightCenter.y - circleRadius + 36;
+	if (progress === 1 && streak !== 0) {
+		const badgeX = x + radius - 36;
+		const badgeY = y - radius + 36;
 		ctx.fillStyle = '#16a34a';
 		ctx.beginPath();
 		ctx.roundRect(badgeX - 56, badgeY - 24, 112, 48, 14);
@@ -173,20 +133,56 @@ export async function renderPresentationImage(opts: PresentationOptions): Promis
 		ctx.fillStyle = '#f8fafc';
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText(saisir.image.streak(opts.streak), badgeX, badgeY + 8);
+		ctx.fillText(saisir.image.streak(streak), badgeX, badgeY + 8);
 	}
 
 	ctx.restore();
+}
+
+export async function renderPresentationImage(opts: PresentationOptions): Promise<Buffer> {
+
+	const goal = opts.goal === null || opts.goal < 0 ? 0 : opts.goal;
+	let steps = opts.steps < 0 ? 0 : opts.steps;
+	let streak = opts.streak < 0 ? 0 : opts.streak;
+
+
+	const s = {w: 1200, h: 630};
+
+	const canvas = createCanvas(s.w, s.h);
+	const ctx = canvas.getContext('2d');
+	fillBackground({ctx, s, c1: {x: s.w * 0.1, y: s.h * 0.22, r: 160}, c2: {x: s.w * 0.9, y: s.h * 0.87, r: 200}});
+
+
+	ctx.fillStyle = '#f8fafc';
+	ctx.font = 'bold 44px DejaVuSans';
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'alphabetic';
+	ctx.fillText(saisir.image.dateTitle(opts.dateISO), s.w / 2, 72);
+
+	const left_x = s.w * 0.3;
+	const right_x = s.w * 0.7;
+	const h_center = s.h * 0.52;
+	const radius = s.h * 0.35;
+	const padding = 6;
+	const arcWidth = 20;
+
+
+	drawBackgroundCircle(ctx, left_x, h_center, radius);
+	drawAvatar(ctx, left_x, h_center, radius - padding, await loadImage(opts.avatarUrl));
+
+	ctx.save();
+
+	drawBackgroundCircle(ctx, right_x, h_center, radius);
+	drawStepWidget(ctx, right_x, h_center, radius - padding - arcWidth / 2, arcWidth, steps, goal, streak);
+
 
 	ctx.textAlign = 'center';
 	ctx.font = '30px DejaVuSans';
 	ctx.fillStyle = '#cbd5e1';
 	ctx.textBaseline = 'alphabetic';
-	if (hasGoal && reached) {
-		ctx.fillText(saisir.image.reached, width / 2, height - 36);
-	} else if (hasGoal && !reached) {
-		const remaining = Math.max(0, goal - opts.steps);
-		ctx.fillText(saisir.image.remaining(remaining), width / 2, height - 36);
+	if (goal !== 0) {
+		const txt = steps >= goal ? saisir.image.reached : saisir.image.remaining(goal - steps);
+		ctx.fillText(txt, s.w / 2, s.h - 36);
 	}
 
 	return canvas.toBuffer('image/png');
@@ -199,33 +195,19 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	const average = Math.ceil(total / filledDays.length);
 
 
-	const width = 1200;
-	const height = 630;
-	const canvas = createCanvas(width, height);
-	const ctx = canvas.getContext('2d');
+	const s = {w: 1200, h: 630};
 
-	const grad = ctx.createLinearGradient(0, 0, width, height);
-	grad.addColorStop(0, '#0a0f1f');
-	grad.addColorStop(1, '#1f3b73');
-	ctx.fillStyle = grad;
-	ctx.fillRect(0, 0, width, height);
-	ctx.globalAlpha = 0.12;
-	ctx.fillStyle = '#93c5fd';
-	ctx.beginPath();
-	ctx.arc(width * 0.18, height * 0.2, 140, 0, Math.PI * 2);
-	ctx.fill();
-	ctx.fillStyle = '#6ee7b7';
-	ctx.beginPath();
-	ctx.arc(width * 0.86, height * 0.86, 180, 0, Math.PI * 2);
-	ctx.fill();
-	ctx.globalAlpha = 1;
+	const canvas = createCanvas(s.w, s.h);
+	const ctx = canvas.getContext('2d');
+	fillBackground({ctx, s, c1: {x: s.w * 0.86, y: s.h * 0.86, r: 180}, c2: {x: s.w * 0.16, y: s.h * 0.2, r: 140}});
+
 
 	const title = resumeLang.image.title(opts.mondayISO);
 	ctx.fillStyle = '#f8fafc';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'alphabetic';
 	ctx.font = 'bold 42px DejaVuSans';
-	ctx.fillText(title, width / 2, 64);
+	ctx.fillText(title, s.w / 2, 64);
 
 	const pad = 32;
 	const topPad = 80;
@@ -234,7 +216,7 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 
 	const cardW = 360;
 	const cardH = 184;
-	const statsY = height - bottomMargin - cardH;
+	const statsY = s.h - bottomMargin - cardH;
 
 	const availableTop = Math.max(0, statsY - topPad);
 	const avatarDiameter = Math.max(128, Math.min(320, availableTop - 16));
@@ -242,23 +224,16 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	const leftAvatarPad = cardW / 2 - avatarRadius;
 
 	ctx.save();
-	const avatarBg = ctx.createLinearGradient(pad, topPad, pad + leftAvatarPad + avatarRadius * 2, topPad + avatarRadius * 2);
-	avatarBg.addColorStop(0, '#0b1220');
-	avatarBg.addColorStop(1, '#0f172a');
-	ctx.beginPath();
-	ctx.arc(pad + avatarRadius + leftAvatarPad, topPad + avatarRadius, avatarRadius, 0, Math.PI * 2);
-	ctx.fillStyle = avatarBg;
-	ctx.fill();
-	const img = await loadImage(opts.avatarUrl);
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(pad + avatarRadius + leftAvatarPad, topPad + avatarRadius, Math.max(avatarRadius - 6, 8), 0, Math.PI * 2);
-	ctx.clip();
-	const scale = Math.max(((avatarRadius * 2) - 12) / img.width, ((avatarRadius * 2) - 12) / img.height);
-	const w = img.width * scale, h = img.height * scale;
-	ctx.drawImage(img, pad + leftAvatarPad + avatarRadius - w / 2, topPad + avatarRadius - h / 2, w, h);
-	ctx.restore();
-	ctx.restore();
+
+	const avatar = {
+		x: pad + avatarRadius + leftAvatarPad,
+		y: topPad + avatarRadius,
+		r: avatarRadius
+	}
+
+	drawBackgroundCircle(ctx, avatar.x, avatar.y, avatar.r);
+	drawAvatar(ctx, avatar.x, avatar.y, avatar.r - 6, await loadImage(opts.avatarUrl));
+
 
 	ctx.beginPath();
 	ctx.roundRect(pad, statsY, cardW, cardH, 18);
@@ -283,8 +258,8 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	const gapLeftToChart = 24;
 	const chartX = pad + cardW + gapLeftToChart;
 	const chartY = topPad;
-	const chartW = width - chartX - rightMargin;
-	const chartH = height - chartY - bottomMargin;
+	const chartW = s.w - chartX - rightMargin;
+	const chartH = s.h - chartY - bottomMargin;
 	ctx.beginPath();
 	ctx.roundRect(chartX, chartY, chartW, chartH, 20);
 	const chartBg = ctx.createLinearGradient(chartX, chartY, chartX + chartW, chartY + chartH);
