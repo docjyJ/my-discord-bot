@@ -20,7 +20,7 @@
   "dependencies": {
     "@napi-rs/canvas": "^0.1.80",
     "@prisma/client": "^6.16.2",
-    "discord.js": "^14.22.1",
+    "discord.js": "^14.24.0",
     "dotenv": "^17.2.2",
     "prisma": "^6.16.2"
   },
