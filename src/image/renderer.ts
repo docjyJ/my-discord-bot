@@ -22,12 +22,6 @@ export type WeeklySummaryProps = {
 
 const PI_2 = Math.PI * 2;
 
-type Circle = {
-	x: number;
-	y: number;
-	radius: number;
-}
-
 class Draw {
 	private ctx: SKRSContext2D;
 	private canvas: Canvas;
@@ -39,6 +33,7 @@ class Draw {
 		this.ctx = this.canvas.getContext('2d');
 		this.width = width;
 		this.height = height;
+		this.background();
 	}
 
 	public createLinearGradient(x0: number, y0: number, x1: number, y1: number, color0: string, color1: string) {
@@ -48,29 +43,36 @@ class Draw {
 		return grad;
 	}
 
-	public background(c1: Circle, c2: Circle) {
+	public background() {
+		const key = Math.min(this.width, this.height);
+		const c1x = key * 0.19;
+		const c1y = key * 0.22;
+		const c1r = key * 0.25;
+		const c2x = this.width - key * 0.19;
+		const c2y = this.height - key * 0.12;
+		const c2r = key * 0.32;
 		this.ctx.fillStyle = this.createLinearGradient(0, 0, this.width, this.height, '#0a0f1f', '#1f3b73');
 		this.ctx.fillRect(0, 0, this.width, this.height);
 		this.ctx.globalAlpha = 0.12;
 		this.ctx.fillStyle = '#6ee7b7';
 		this.ctx.beginPath();
-		this.ctx.arc(c1.x, c1.y, c1.radius, 0, PI_2);
+		this.ctx.arc(c1x, c1y, c1r, 0, PI_2);
 		this.ctx.fill();
 		this.ctx.fillStyle = '#93c5fd';
 		this.ctx.beginPath();
-		this.ctx.arc(c2.x, c2.y, c2.radius, 0, PI_2);
+		this.ctx.arc(c2x, c2y, c2r, 0, PI_2);
 		this.ctx.fill();
 		this.ctx.globalAlpha = 1;
 	}
 
-	public backgroundCircle({x, y, radius}: Circle) {
+	public backgroundCircle(x: number, y: number, radius: number) {
 		this.ctx.fillStyle = this.createLinearGradient(x - radius, y - radius, x + radius, y + radius, '#0b1220', '#0f172a');
 		this.ctx.beginPath();
 		this.ctx.arc(x, y, radius, 0, PI_2);
 		this.ctx.fill();
 	}
 
-	public avatarCircle({x, y, radius}: Circle, image: Image) {
+	public avatarCircle(x: number, y: number, radius: number, image: Image) {
 		this.ctx.save();
 		const scale = radius / Math.min(image.width, image.height);
 		const w = image.width * scale;
@@ -133,8 +135,6 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 
 	const draw = new Draw(1200, 630);
 
-	draw.background({x: 0.1 * width, y: 0.22 * height, radius: 160}, {x: 0.9 * width, y: 0.87 * height, radius: 200});
-
 	draw.text(saisir.image.dateTitle(opts.dateISO), width / 2, 50, '#f8fafc', 44);
 
 
@@ -146,10 +146,10 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 	const arcWidth = 20;
 	const image = await loadImage(opts.avatarUrl);
 
-	draw.backgroundCircle({x: left_x, y: h_center, radius});
-	draw.avatarCircle({x: left_x, y: h_center, radius: radius - padding}, image);
+	draw.backgroundCircle(left_x, h_center, radius);
+	draw.avatarCircle(left_x, h_center, radius - padding, image);
 
-	draw.backgroundCircle({x: right_x, y: h_center, radius});
+	draw.backgroundCircle(right_x, h_center, radius);
 
 	const widget_radius = radius - padding - arcWidth / 2;
 
@@ -201,7 +201,6 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 	const height = 630;
 
 	const draw = new Draw(width, height);
-	draw.background({x: width * 0.86, y: height * 0.86, radius: 180}, {x: width * 0.16, y: height * 0.2, radius: 140});
 
 	const title = resumeLang.image.title(opts.mondayISO);
 
@@ -227,8 +226,8 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
 		radius: avatarRadius
 	}
 
-	draw.backgroundCircle(avatar);
-	draw.avatarCircle({x: avatar.x, y: avatar.y, radius: avatar.radius - 6}, await loadImage(opts.avatarUrl));
+	draw.backgroundCircle(avatar.x, avatar.y, avatar.radius);
+	draw.avatarCircle(avatar.x, avatar.y, avatar.radius - 6, await loadImage(opts.avatarUrl));
 
 	const cardBg = draw.createLinearGradient(pad, statsY, pad + cardW, statsY + cardH, '#0b1220', '#0f172a');
 	draw.roundedRectFill(pad, statsY, cardW, cardH, 18, cardBg);
