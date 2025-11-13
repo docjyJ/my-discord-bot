@@ -125,9 +125,7 @@ async function sendWeeklySummaries(monday: DateTime) {
 
       const counts = await db.entries.count(userId);
       const countSucces = counts.succes;
-
-      const filledDays = days.filter((d): d is number => d !== null);
-      const countDays = filledDays.length;
+      const countDays = counts.total;
 
       const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, bestStreak, countSucces, countDays});
 

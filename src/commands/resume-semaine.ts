@@ -22,9 +22,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const counts = await db.entries.count(interaction.user.id);
   const countSucces = counts.succes;
-
-  const filledDays = days.filter((d): d is number => d !== null);
-  const countDays = filledDays.length;
+  const countDays = counts.total;
 
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
   const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, bestStreak, countSucces, countDays});
