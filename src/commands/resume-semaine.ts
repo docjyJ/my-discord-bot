@@ -18,10 +18,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const monday = date.addDay(1 - date.weekDay());
   const {days, goal} = await getWeekSummary(interaction.user.id, monday);
-  const streak = await db.streak.get(interaction.user.id, monday.addDay(6));
+  const bestStreak = await db.streak.best(interaction.user.id);
+
+  const counts = await db.entries.count(interaction.user.id);
+  const countSucces = counts.succes;
+
+  const filledDays = days.filter((d): d is number => d !== null);
+  const countDays = filledDays.length;
 
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
-  const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});
+  const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, bestStreak, countSucces, countDays});
 
   return interaction.reply({
     content: resumeLang.replyAction.message(interaction.user.id, monday),

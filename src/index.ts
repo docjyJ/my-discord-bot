@@ -121,9 +121,15 @@ async function sendWeeklySummaries(monday: DateTime) {
       const user = await client.users.fetch(userId);
       const avatarUrl = user.displayAvatarURL({extension: 'png', size: 512});
 
-      const streak = await db.streak.get(userId, monday.addDay(-1));
+      const bestStreak = await db.streak.best(userId);
 
-      const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});
+      const counts = await db.entries.count(userId);
+      const countSucces = counts.succes;
+
+      const filledDays = days.filter((d): d is number => d !== null);
+      const countDays = filledDays.length;
+
+      const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, bestStreak, countSucces, countDays});
 
       await textChannel.send({
         content: lang.scheduler.weeklySummaryMessage(userId, monday),

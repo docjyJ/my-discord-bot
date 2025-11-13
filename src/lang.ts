@@ -89,13 +89,9 @@ export const resumeSemaine = {
     title: 'Résumé hebdomadaire',
     fieldTotal: (steps: number) => `Total : ${steps} pas`,
     fieldAverage: (steps: number) => `Moyenne : ${steps} pas/jour`,
-    fieldGoalReached: (count: number) =>
-      count === 0
-        ? 'Objectif atteint : aucun jour'
-        : count === 1
-          ? 'Objectif atteint : 1 jour'
-          : `Objectif atteint : ${count} jours`,
-    streak: (days: number) => (days === 1 ? 'Série : 1 jour' : `Série : ${days} jours`)
+    fieldDaysEntered: (days: number) => (days === 1 ? 'Total saisis : 1 jour' : `Total saisis : ${days} jours`),
+    fieldDaysSucceeded: (days: number) => (days === 1 ? 'Total réussis : 1 jour' : `Total réussis : ${days} jours`),
+    fieldBestStreak: (days: number) => (days === 1 ? 'Meilleure série : 1 jour' : `Meilleure série : ${days} jours`)
   },
   replyAction: {
     invalidMonday: 'Date du lundi invalide.',

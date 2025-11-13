@@ -93,16 +93,13 @@ export type WeeklySummaryProps = {
   monday: DateTime;
   goal: number | null;
   days: (number | null)[];
-  streak: number;
+  bestStreak: number;
+  countSucces: number;
+  countDays: number;
 };
 
 export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promise<Buffer> {
   const filledDays = opts.days.filter((d): d is number => d !== null);
-  let successDays = 0;
-  if (opts.goal !== null) {
-    const goal = opts.goal;
-    successDays = filledDays.filter(d => d >= goal).length;
-  }
   const total = filledDays.reduce((acc, val) => acc + val, 0);
   const average = filledDays.length > 0 ? Math.ceil(total / filledDays.length) : 0;
 
@@ -121,7 +118,7 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
   const bottomMargin = 48;
 
   const cardW = 360;
-  const cardH = 184;
+  const cardH = 200;
   const statsY = height - bottomMargin - cardH;
 
   const availableTop = Math.max(0, statsY - topPad);
@@ -137,13 +134,55 @@ export async function renderWeeklySummaryImage(opts: WeeklySummaryProps): Promis
   const cardBg = draw.createLinearGradient(pad, statsY, pad + cardW, statsY + cardH, '#0b1220', '#0f172a');
   draw.roundedRectFill(pad, statsY, cardW, cardH, 18, cardBg);
 
-  draw.text(resumeLang.embed.fieldTotal(total), pad + 18, statsY + 36, '#cbd5e1', 26, 'left');
-  draw.text(resumeLang.embed.fieldAverage(Math.round(average)), pad + 18, statsY + 74, '#cbd5e1', 26, 'left');
-  if (opts.goal) {
-    draw.text(resumeLang.embed.fieldGoalReached(successDays), pad + 18, statsY + 112, '#cbd5e1', 26, 'left');
+  const lineStart = statsY + 24;
+  const lineStep = 38;
+  let currentLine = 0;
+
+  draw.text(resumeLang.embed.fieldTotal(total), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
+  currentLine++;
+
+  draw.text(
+    resumeLang.embed.fieldAverage(Math.round(average)),
+    pad + 18,
+    lineStart + currentLine * lineStep,
+    '#cbd5e1',
+    26,
+    'left'
+  );
+  currentLine++;
+
+  draw.text(
+    resumeLang.embed.fieldDaysEntered(opts.countDays),
+    pad + 18,
+    lineStart + currentLine * lineStep,
+    '#cbd5e1',
+    26,
+    'left'
+  );
+  currentLine++;
+
+  if (opts.countSucces > 0) {
+    draw.text(
+      resumeLang.embed.fieldDaysSucceeded(opts.countSucces),
+      pad + 18,
+      lineStart + currentLine * lineStep,
+      '#cbd5e1',
+      26,
+      'left'
+    );
+    currentLine++;
   }
-  if (opts.streak > 0) {
-    draw.text(resumeLang.embed.streak(opts.streak), pad + 18, statsY + 150, '#cbd5e1', 26, 'left');
+
+  if (opts.bestStreak > 0) {
+    draw.text(
+      resumeLang.embed.fieldBestStreak(opts.bestStreak),
+      pad + 18,
+      lineStart + currentLine * lineStep,
+      '#cbd5e1',
+      26,
+      'left'
+    );
+    currentLine++;
   }
 
   const gapLeftToChart = 24;

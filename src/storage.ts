@@ -50,6 +50,16 @@ export default {
         })
         .then(() => {})
   },
+  entries: {
+    count: async (userId: string) => {
+      const user = await prisma.user.findUnique({where: {id: userId}, select: {stepsGoal: true}});
+      const total = await prisma.dailyEntry.count({where: {userId, steps: {not: null}}});
+      const goal = user?.stepsGoal ?? null;
+      if (goal === null) return {succes: 0, total};
+      const succes = await prisma.dailyEntry.count({where: {userId, steps: {gte: goal}}});
+      return {succes, total};
+    }
+  },
   user: {
     list: () =>
       prisma.user
@@ -70,7 +80,7 @@ export async function cleanDatabase() {
   await prisma.user.deleteMany({where: {stepsGoal: null, entries: {every: {steps: null}}}});
 }
 
-export async function getBestStreak(userId: string): Promise<number> {
+async function getBestStreak(userId: string): Promise<number> {
   const gte = await prisma.user
     .findUnique({
       where: {id: userId},

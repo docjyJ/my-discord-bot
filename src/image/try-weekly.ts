@@ -9,7 +9,9 @@ async function main() {
     monday: DateTime.parse('2025-10-20')!,
     goal: 8000,
     days: [5000, 8200, 7000, 9500, null, 4000, 10000],
-    streak: 1
+    bestStreak: 7,
+    countSucces: 29,
+    countDays: 48
   });
   writeFileSync('test-weekly.png', buf);
 }
