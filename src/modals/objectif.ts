@@ -7,12 +7,12 @@ import {
   TextInputStyle
 } from 'discord.js';
 import {objectif} from '../lang';
-import {getGoal, setGoal} from '../storage';
+import db from '../storage';
 
 export const modalId = 'objectif';
 
 async function getModal(userId: string) {
-  const current = await getGoal(userId);
+  const current = await db.goal.get(userId);
   const modal = new ModalBuilder().setCustomId(modalId).setTitle(objectif.modal.title);
 
   const input = new TextInputBuilder()
@@ -32,13 +32,13 @@ async function getModal(userId: string) {
 
 async function executor(interaction: ModalSubmitInteraction) {
   const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
-  const stepsGoal = await getGoal(interaction.user.id);
+  const stepsGoal = await db.goal.get(interaction.user.id);
 
   if (rawStr === '') {
     if (stepsGoal === null) {
       return interaction.reply({content: objectif.replyAction.noChange, flags: MessageFlags.Ephemeral});
     }
-    await setGoal(interaction.user.id, null);
+    await db.goal.set(interaction.user.id, null);
     return interaction.reply({content: objectif.replyAction.noGoal(interaction.user.id)});
   }
 
@@ -49,7 +49,7 @@ async function executor(interaction: ModalSubmitInteraction) {
   if (stepsGoal === raw) {
     return interaction.reply({content: objectif.replyAction.noChange, flags: MessageFlags.Ephemeral});
   }
-  await setGoal(interaction.user.id, raw);
+  await db.goal.set(interaction.user.id, raw);
   return interaction.reply({content: objectif.replyAction.goal(interaction.user.id, raw)});
 }
 

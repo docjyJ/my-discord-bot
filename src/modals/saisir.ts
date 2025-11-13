@@ -10,7 +10,7 @@ import {
 import DateTime from '../date-time';
 import {renderPresentationImage} from '../image/renderer';
 import {saisir} from '../lang';
-import {getEntry, getGoal, getStreak, setEntry} from '../storage';
+import db from '../storage';
 
 const modalId = 'saisir';
 
@@ -25,7 +25,7 @@ async function getModal(date: DateTime, userId?: string) {
     .setRequired(false);
 
   if (userId) {
-    const existing = await getEntry(userId, date.toDateString());
+    const existing = await db.entry.get(userId, date.toDateString());
     if (existing !== undefined && existing !== null) {
       pasInput.setValue(String(existing));
     }
@@ -37,8 +37,8 @@ async function getModal(date: DateTime, userId?: string) {
 }
 
 async function buildAttachmentFor(interaction: ModalSubmitInteraction, date: DateTime, steps: number) {
-  const stepsGoal = await getGoal(interaction.user.id);
-  const streak = await getStreak(interaction.user.id, date);
+  const stepsGoal = await db.goal.get(interaction.user.id);
+  const streak = await db.streak.get(interaction.user.id, date);
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
   const img = await renderPresentationImage({
     username: `@${interaction.user.username}`,
@@ -58,13 +58,13 @@ async function executor(interaction: ModalSubmitInteraction, [dateISO]: string[]
   }
 
   const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
-  const steps = await getEntry(interaction.user.id, date.toDateString());
+  const steps = await db.entry.get(interaction.user.id, date.toDateString());
 
   if (rawStr === '') {
     if (steps === null) {
       return interaction.reply({content: saisir.replyAction.noChange(date), flags: MessageFlags.Ephemeral});
     }
-    await setEntry(interaction.user.id, date.toDateString(), null);
+    await db.entry.set(interaction.user.id, date.toDateString(), null);
     return interaction.reply({content: saisir.replyAction.entryDeleted(interaction.user.id, date)});
   }
 
@@ -77,7 +77,7 @@ async function executor(interaction: ModalSubmitInteraction, [dateISO]: string[]
     return interaction.reply({content: saisir.replyAction.noChange(date), flags: MessageFlags.Ephemeral});
   }
 
-  await setEntry(interaction.user.id, date.toDateString(), raw);
+  await db.entry.set(interaction.user.id, date.toDateString(), raw);
 
   return interaction.reply({
     content: saisir.replyAction.saved(interaction.user.id, date),

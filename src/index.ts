@@ -14,17 +14,7 @@ import {renderWeeklySummaryImage} from './image/renderer';
 import {lang, saisir as saisirLang} from './lang';
 import {getSaisirModal, modalsExecutor} from './modals';
 import {channelId, guildId, token} from './secrets';
-import {
-  DAILY_PROMPT_KEY,
-  getEntry,
-  getGoal,
-  getMeta,
-  getStreak,
-  getWeekSummary,
-  listUsers,
-  markMeta,
-  WEEKLY_SUMMARY_KEY
-} from './storage';
+import db, {getWeekSummary} from './storage';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages]
@@ -64,17 +54,17 @@ function startScheduler() {
     console.log(lang.scheduler.schedulerTick(now));
     try {
       if (now.hour() >= 19) {
-        if ((await getMeta(DAILY_PROMPT_KEY)) !== now.toDateString()) {
+        if ((await db.lastDailyPrompt.get()) !== now.toDateString()) {
           await sendDailyPrompts(now);
-          await markMeta(DAILY_PROMPT_KEY, now.toDateString());
+          await db.lastDailyPrompt.set(now.toDateString());
         }
       }
 
       if (now.weekDay() === 1 && now.hour() >= 8) {
         const mondayPrev = now.addDay(-7);
-        if ((await getMeta(WEEKLY_SUMMARY_KEY)) !== mondayPrev.toDateString()) {
+        if ((await db.lastWeeklySummary.get()) !== mondayPrev.toDateString()) {
           await sendWeeklySummaries(mondayPrev);
-          await markMeta(WEEKLY_SUMMARY_KEY, mondayPrev.toDateString());
+          await db.lastWeeklySummary.set(mondayPrev.toDateString());
         }
       }
     } catch (e) {
@@ -88,12 +78,12 @@ function startScheduler() {
 
 async function sendDailyPrompts(now: DateTime) {
   console.log(lang.scheduler.sendingRemindersFor(now));
-  const users = await listUsers();
+  const users = await db.user.list();
   const notFilled: string[] = [];
   for (const userId of users) {
-    const stepsGoal = await getGoal(userId);
+    const stepsGoal = await db.goal.get(userId);
     if (!stepsGoal || stepsGoal === 0) continue;
-    const steps = await getEntry(userId, now.toDateString());
+    const steps = await db.entry.get(userId, now.toDateString());
     if (steps === null) notFilled.push(userId);
   }
   if (notFilled.length === 0) return;
@@ -122,7 +112,7 @@ async function sendWeeklySummaries(monday: DateTime) {
   if (!channelFetched || !channelFetched.isTextBased()) return;
   const textChannel = channelFetched as TextChannel;
 
-  const users = await listUsers();
+  const users = await db.user.list();
   for (const userId of users) {
     try {
       const {days, goal} = await getWeekSummary(userId, monday);
@@ -131,7 +121,7 @@ async function sendWeeklySummaries(monday: DateTime) {
       const user = await client.users.fetch(userId);
       const avatarUrl = user.displayAvatarURL({extension: 'png', size: 512});
 
-      const streak = await getStreak(userId, monday.addDay(6));
+      const streak = await db.streak.get(userId, monday.addDay(-1));
 
       const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});
 

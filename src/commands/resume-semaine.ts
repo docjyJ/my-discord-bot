@@ -2,7 +2,7 @@ import {AttachmentBuilder, type ChatInputCommandInteraction, SlashCommandBuilder
 import DateTime from '../date-time';
 import {renderWeeklySummaryImage} from '../image/renderer';
 import {resumeSemaine as resumeLang} from '../lang';
-import {getStreak, getWeekSummary} from '../storage';
+import db, {getWeekSummary} from '../storage';
 
 export const commandName = 'resume-semaine';
 
@@ -18,7 +18,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const monday = date.addDay(1 - date.weekDay());
   const {days, goal} = await getWeekSummary(interaction.user.id, monday);
-  const streak = await getStreak(interaction.user.id, monday.addDay(6));
+  const streak = await db.streak.get(interaction.user.id, monday.addDay(6));
 
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
   const img = await renderWeeklySummaryImage({avatarUrl, monday, days, goal, streak});

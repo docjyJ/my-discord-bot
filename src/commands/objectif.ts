@@ -1,7 +1,7 @@
 import {type ChatInputCommandInteraction, SlashCommandBuilder, type User} from 'discord.js';
 import {objectif} from '../lang';
 import {getObjectiveModal} from '../modals';
-import {getGoal} from '../storage';
+import db from '../storage';
 
 export const commandName = 'objectif';
 
@@ -15,7 +15,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const targetUser: User = utilisateurOpt || interaction.user;
 
   if (utilisateurOpt) {
-    const stepsGoal = await getGoal(targetUser.id);
+    const stepsGoal = await db.goal.get(targetUser.id);
     if (stepsGoal === null) {
       return interaction.reply({content: objectif.replySelect.noGoal(targetUser.id)});
     }
