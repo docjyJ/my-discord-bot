@@ -48,14 +48,7 @@ export default class Draw {
   }
 
   public backgroundCircle(x: number, y: number, radius: number) {
-    this.ctx.fillStyle = this.createLinearGradient(
-      x - radius,
-      y - radius,
-      x + radius,
-      y + radius,
-      '#0b1220',
-      '#0f172a'
-    );
+    this.ctx.fillStyle = this.createLinearGradient(x - radius, y - radius, x + radius, y + radius, '#0b1220', '#0f172a');
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, PI_2);
     this.ctx.fill();
@@ -90,15 +83,7 @@ export default class Draw {
     this.ctx.stroke();
   }
 
-  public drawArc(
-    x: number,
-    y: number,
-    radius: number,
-    width: number,
-    color: string | CanvasGradient,
-    start: number,
-    end: number
-  ) {
+  public drawArc(x: number, y: number, radius: number, width: number, color: string | CanvasGradient, start: number, end: number) {
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = width;
     this.ctx.lineCap = 'round';

@@ -1,31 +1,18 @@
-import {
-  ActionRowBuilder,
-  AttachmentBuilder,
-  MessageFlags,
-  ModalBuilder,
-  type ModalSubmitInteraction,
-  TextInputBuilder,
-  TextInputStyle
-} from 'discord.js';
+import {ActionRowBuilder, AttachmentBuilder, MessageFlags, ModalBuilder, type ModalSubmitInteraction, TextInputBuilder, TextInputStyle} from 'discord.js';
 import DateTime from '../date-time';
 import {renderPresentationImage} from '../image/renderer';
 import {saisir} from '../lang';
-import db from '../storage';
+import {getEntry, getStreak, setEntry} from '../storage';
 
 const modalId = 'saisir';
 
 async function getModal(date: DateTime, userId?: string) {
   const modal = new ModalBuilder().setCustomId(`${modalId}/${date.toDateString()}`).setTitle(saisir.modal.title(date));
 
-  const pasInput = new TextInputBuilder()
-    .setCustomId('pas')
-    .setLabel(saisir.modal.stepLabel)
-    .setPlaceholder(saisir.modal.stepPlaceholder)
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false);
+  const pasInput = new TextInputBuilder().setCustomId('pas').setLabel(saisir.modal.stepLabel).setPlaceholder(saisir.modal.stepPlaceholder).setStyle(TextInputStyle.Short).setRequired(false);
 
   if (userId) {
-    const existing = await db.entry.get(userId, date.toDateString());
+    const existing = await getEntry(userId, date);
     if (existing !== undefined && existing !== null) {
       pasInput.setValue(String(existing));
     }
@@ -37,15 +24,13 @@ async function getModal(date: DateTime, userId?: string) {
 }
 
 async function buildAttachmentFor(interaction: ModalSubmitInteraction, date: DateTime, steps: number) {
-  const stepsGoal = await db.goal.get(interaction.user.id);
-  const streak = await db.streak.get(interaction.user.id, date);
+  const {streak, goal} = await getStreak(interaction.user.id, date);
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
   const img = await renderPresentationImage({
-    username: `@${interaction.user.username}`,
     avatarUrl,
     date,
     steps,
-    goal: stepsGoal,
+    goal,
     streak
   });
   return new AttachmentBuilder(img, {name: `progress-${interaction.user.id}-${date.toDateString()}.png`});
@@ -58,13 +43,13 @@ async function executor(interaction: ModalSubmitInteraction, [dateISO]: string[]
   }
 
   const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
-  const steps = await db.entry.get(interaction.user.id, date.toDateString());
+  const steps = await getEntry(interaction.user.id, date);
 
   if (rawStr === '') {
     if (steps === null) {
       return interaction.reply({content: saisir.replyAction.noChange(date), flags: MessageFlags.Ephemeral});
     }
-    await db.entry.set(interaction.user.id, date.toDateString(), null);
+    await setEntry(interaction.user.id, date, null);
     return interaction.reply({content: saisir.replyAction.entryDeleted(interaction.user.id, date)});
   }
 
@@ -77,7 +62,7 @@ async function executor(interaction: ModalSubmitInteraction, [dateISO]: string[]
     return interaction.reply({content: saisir.replyAction.noChange(date), flags: MessageFlags.Ephemeral});
   }
 
-  await db.entry.set(interaction.user.id, date.toDateString(), raw);
+  await setEntry(interaction.user.id, date, raw);
 
   return interaction.reply({
     content: saisir.replyAction.saved(interaction.user.id, date),

@@ -16,8 +16,7 @@ export const lang = {
       `Il est ${time}. <@${userId}>, tu n'as pas encore saisi tes pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
     weeklySummarySendError: "Impossible d'envoyer le résumé pour",
     connected: 'Connecté',
-    weeklySummaryMessage: (userId: string, monday: DateTime) =>
-      `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`
+    weeklySummaryMessage: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`
   },
   deploy: {
     start: 'Synchronisation complète des commandes (/)...',
@@ -66,8 +65,7 @@ export const saisir = {
   },
   replyAction: {
     invalidDate: 'Date invalide. Format attendu AAAA-MM-JJ.',
-    entryDeleted: (userId: string, date: DateTime) =>
-      `<@${userId}> a supprimé sa saisie pour le ${date.fullLocalDate(fr)}.`,
+    entryDeleted: (userId: string, date: DateTime) => `<@${userId}> a supprimé sa saisie pour le ${date.fullLocalDate(fr)}.`,
     noChange: (date: DateTime) => `Tu n'a pas changé ta saisie pour le ${date.fullLocalDate(fr)}.`,
     invalidValue: 'Valeur invalide: entrer un entier >= 0.',
     saved: (userId: string, date: DateTime) => `<@${userId}> a enregistré ses pas pour le ${date.fullLocalDate(fr)}.`
@@ -95,12 +93,10 @@ export const resumeSemaine = {
   },
   replyAction: {
     invalidMonday: 'Date du lundi invalide.',
-    message: (userId: string, monday: DateTime) =>
-      `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`
+    message: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`
   },
   image: {
     dayLetters: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-    title: (monday: DateTime) =>
-      `Semaine du ${monday.shortLocalDate(fr)} au ${monday.addDay(6).shortLocalDate(fr, true)}`
+    title: (monday: DateTime) => `Semaine du ${monday.shortLocalDate(fr)} au ${monday.addDay(6).shortLocalDate(fr, true)}`
   }
 };

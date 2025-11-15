@@ -11,10 +11,10 @@ export const data = new SlashCommandBuilder()
   .addStringOption(o => o.setName('jour').setDescription(saisir.command.optionJourDescription).setRequired(false));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const jourString = interaction.options.getString('jour');
-  const jour = jourString ? DateTime.parse(jourString) : DateTime.now();
-  if (!jour) return await interaction.reply({content: saisir.replyAction.invalidDate, flags: MessageFlags.Ephemeral});
-  const modal = await getSaisirModal(jour, interaction.user.id);
+  const dateOpt = interaction.options.getString('jour');
+  const date = dateOpt ? DateTime.parse(dateOpt) : DateTime.now();
+  if (!date) return await interaction.reply({content: saisir.replyAction.invalidDate, flags: MessageFlags.Ephemeral});
+  const modal = await getSaisirModal(date, interaction.user.id);
   return await interaction.showModal(modal);
 }
 

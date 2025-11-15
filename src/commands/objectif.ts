@@ -1,7 +1,7 @@
-import {type ChatInputCommandInteraction, SlashCommandBuilder, type User} from 'discord.js';
+import {type ChatInputCommandInteraction, SlashCommandBuilder} from 'discord.js';
 import {objectif} from '../lang';
 import {getObjectiveModal} from '../modals';
-import db from '../storage';
+import {getGoal} from '../storage';
 
 export const commandName = 'objectif';
 
@@ -11,15 +11,14 @@ export const data = new SlashCommandBuilder()
   .addUserOption(o => o.setName('utilisateur').setDescription(objectif.command.optionUtilisateurDescription));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const utilisateurOpt = interaction.options.getUser('utilisateur');
-  const targetUser: User = utilisateurOpt || interaction.user;
+  const optUser = interaction.options.getUser('utilisateur');
 
-  if (utilisateurOpt) {
-    const stepsGoal = await db.goal.get(targetUser.id);
+  if (optUser) {
+    const stepsGoal = await getGoal(optUser.id);
     if (stepsGoal === null) {
-      return interaction.reply({content: objectif.replySelect.noGoal(targetUser.id)});
+      return interaction.reply({content: objectif.replySelect.noGoal(optUser.id)});
     }
-    return interaction.reply({content: objectif.replySelect.goal(targetUser.id, stepsGoal)});
+    return interaction.reply({content: objectif.replySelect.goal(optUser.id, stepsGoal)});
   }
 
   const modal = await getObjectiveModal(interaction.user.id);

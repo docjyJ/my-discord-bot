@@ -55,4 +55,8 @@ export default class DateTime {
       ...(withYear ? {year: 'numeric'} : {})
     });
   }
+
+  sameDay(other: DateTime) {
+    return this.date.getDate() === other.date.getDate() && this.date.getMonth() === other.date.getMonth() && this.date.getFullYear() === other.date.getFullYear();
+  }
 }

@@ -4,7 +4,6 @@ import {renderPresentationImage} from './renderer';
 
 async function main() {
   const buf = await renderPresentationImage({
-    username: '@tester',
     avatarUrl: 'https://www.slate.fr/uploads/store/drupal_slate/train_1.jpg',
     // biome-ignore lint/style/noNonNullAssertion: test date
     date: DateTime.parse('2025-10-25')!,

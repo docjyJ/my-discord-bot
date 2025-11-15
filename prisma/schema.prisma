@@ -11,7 +11,7 @@ datasource db {
 }
 
 model User {
-  id        String       @id
+  userId    String       @id
   stepsGoal Int?
   entries   DailyEntry[]
 }
@@ -20,7 +20,7 @@ model DailyEntry {
   userId String
   date   String
   steps  Int?
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@id([userId, date])
   @@index([date])
