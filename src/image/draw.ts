@@ -99,6 +99,13 @@ export default class Draw {
     this.ctx.fill();
   }
 
+  public fillCircle(x: number, y: number, radius: number, fill: string | CanvasGradient) {
+    this.ctx.fillStyle = fill;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius, 0, PI_2);
+    this.ctx.fill();
+  }
+
   public toBuffer() {
     return this.canvas.toBuffer('image/png');
   }

@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 
 const WEEKLY_SUMMARY_KEY = 'lastWeeklySummaryMonday';
 const DAILY_PROMPT_KEY = 'lastDailyPrompt';
+const MONTHLY_SUMMARY_KEY = 'lastMonthlySummaryFirstDay';
 
 async function getMeta(key: string) {
   const meta = await prisma.meta.findUnique({where: {key}, select: {value: true}});
@@ -37,6 +38,15 @@ export async function getLastDailyPrompt() {
 
 export function setLastDailyPrompt(date: DateTime) {
   return setMeta(DAILY_PROMPT_KEY, date.toDateString());
+}
+
+export async function getLastMonthlySummary() {
+  const value = await getMeta(MONTHLY_SUMMARY_KEY);
+  return value ? DateTime.parse(value) : null;
+}
+
+export function setLastMonthlySummary(date: DateTime) {
+  return setMeta(MONTHLY_SUMMARY_KEY, date.toDateString());
 }
 
 export async function getGoal(userId: string) {
@@ -168,3 +178,66 @@ export async function getDataForWeeklySummary(user: User, date: DateTime) {
   }
 }
 
+export async function getDataForMonthlySummary(user: User, date: DateTime) {
+  const userId = user.id;
+  const firstDay = date.firstDayOfMonth();
+  const daysInMonth = firstDay.daysInMonth();
+
+  const dates: string[] = [];
+  for (let i = 0; i < daysInMonth; i++) {
+    dates.push(firstDay.addDay(i).toDateString());
+  }
+
+  const u = await prisma.user.findUnique({
+    where: {userId},
+    select: {
+      stepsGoal: true,
+      entries: {where: {date: {in: dates}}},
+      _count: {select: {entries: {where: {steps: {not: null}}}}}
+    }
+  });
+
+  const data = {
+    date: firstDay,
+    days: dates.map(date => u?.entries.find(e => e.date === date)?.steps ?? null),
+    countEntries: u?._count.entries ?? 0,
+    avatarUrl: user.displayAvatarURL({extension: 'png', size: 128})
+  };
+
+  if (u && u.stepsGoal !== null) {
+    const entries = await prisma.dailyEntry.findMany({
+      select: {date: true},
+      where: {userId, steps: {gte: u.stepsGoal}},
+      orderBy: {date: 'asc'}
+    });
+
+    let currentStreak = 0;
+    let prevDate: DateTime | null = null;
+    let bestStreak = 0;
+
+    for (const {date: dateStr} of entries) {
+      const date = DateTime.parse(dateStr);
+      if (date !== null) {
+        // biome-ignore lint/complexity/useOptionalChain: : error TS2339: Property 'addDay' does not exist on type 'never'.
+        if (prevDate !== null && prevDate.addDay(1).sameDay(date)) currentStreak++;
+        else currentStreak = 1;
+
+        bestStreak = Math.max(bestStreak, currentStreak);
+        prevDate = date;
+      }
+    }
+    return {
+      ...data,
+      goal: u.stepsGoal,
+      bestStreak,
+      countSuccesses: entries.length
+    };
+  } else {
+    return {
+      ...data,
+      goal: null,
+      bestStreak: null,
+      countSuccesses: null
+    };
+  }
+}

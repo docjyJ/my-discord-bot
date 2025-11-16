@@ -16,7 +16,12 @@ export const lang = {
       `Il est ${time}. <@${userId}>, tu n'as pas encore saisi tes pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
     weeklySummarySendError: "Impossible d'envoyer le résumé pour",
     connected: 'Connecté',
-    weeklySummaryMessage: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`
+    weeklySummaryMessage: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`,
+    monthlySummaryMessage: (userId: string, firstDay: DateTime) => {
+      const label = capitalizeFirst(firstDay.monthLocalName(fr));
+      return `<@${userId}>, voici ton résumé pour le mois de ${label}.`;
+    },
+    monthlySummarySendError: "Impossible d'envoyer le résumé mensuel pour"
   },
   deploy: {
     start: 'Synchronisation complète des commandes (/)...',
@@ -101,3 +106,29 @@ export const resumeSemaine = {
   }
 };
 
+export const resumeMois = {
+  command: {
+    description: 'Afficher un résumé du mois',
+    optionMoisDescription: 'Date (AAAA-MM-JJ) du mois à résumer (optionnel)'
+  },
+  embed: {
+    title: 'Résumé mensuel',
+    fieldTotal: (steps: number) => `Total : ${steps} pas`,
+    fieldAverage: (steps: number) => `Moyenne : ${steps} pas/jour`,
+    fieldDaysEntered: (days: number) => (days === 1 ? 'Total saisis : 1 jour' : `Total saisis : ${days} jours`),
+    fieldDaysSucceeded: (days: number) => (days === 1 ? 'Total réussis : 1 jour' : `Total réussis : ${days} jours`),
+    fieldBestStreak: (days: number) => (days === 1 ? 'Meilleure série : 1 jour' : `Meilleure série : ${days} jours`)
+  },
+  replyAction: {
+    invalidDate: 'Date invalide.',
+    message: (userId: string, date: DateTime) => `<@${userId}>, voici ton résumé pour le mois de ${capitalizeFirst(date.monthLocalName(fr))}.`
+  },
+  image: {
+    dayLetters: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+    title: (date: DateTime) => capitalizeFirst(date.monthLocalName(fr))
+  }
+};
+
+function capitalizeFirst(str: string) {
+  return str.length === 0 ? str : str[0].toUpperCase() + str.slice(1);
+}

@@ -59,4 +59,28 @@ export default class DateTime {
   sameDay(other: DateTime) {
     return this.date.getDate() === other.date.getDate() && this.date.getMonth() === other.date.getMonth() && this.date.getFullYear() === other.date.getFullYear();
   }
+
+  day() {
+    return this.date.getDate();
+  }
+
+  month() {
+    return this.date.getMonth() + 1;
+  }
+
+  year() {
+    return this.date.getFullYear();
+  }
+
+  daysInMonth() {
+    return new Date(this.date.getFullYear(), this.date.getMonth() + 1, 0).getDate();
+  }
+
+  monthLocalName(locale: string) {
+    return this.date.toLocaleDateString(locale, {month: 'long', year: 'numeric'});
+  }
+
+  firstDayOfMonth() {
+    return new DateTime(new Date(this.date.getFullYear(), this.date.getMonth(), 1));
+  }
 }

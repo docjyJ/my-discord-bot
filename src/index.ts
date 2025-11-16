@@ -2,11 +2,11 @@ import {ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, Events, GatewayInt
 import {commandsExecutors} from './commands';
 import DateTime from './date-time';
 import {deployCommands} from './deploy-commands';
-import {renderWeeklySummaryImage} from './image/renderer';
+import {renderWeeklySummaryImage, renderMonthlySummaryImage, type MonthlySummaryData} from './image/renderer';
 import {lang, saisir as saisirLang} from './lang';
 import {getSaisirModal, modalsExecutor} from './modals';
 import {channelId, guildId, token} from './secrets';
-import {getDataForWeeklySummary, getEntry, getGoal, getLastDailyPrompt, getLastWeeklySummary, listUsers, setLastDailyPrompt, setLastWeeklySummary} from './storage';
+import {getDataForWeeklySummary, getEntry, getGoal, getLastDailyPrompt, getLastWeeklySummary, listUsers, setLastDailyPrompt, setLastWeeklySummary, getLastMonthlySummary, setLastMonthlySummary, getDataForMonthlySummary} from './storage';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages]
@@ -59,6 +59,16 @@ function startScheduler() {
         if (!lastSummary?.sameDay(mondayPrev)) {
           await sendWeeklySummaries(mondayPrev);
           await setLastWeeklySummary(mondayPrev);
+        }
+      }
+
+      // Résumé mensuel : le premier jour du mois à 09h (UTC) -> envoyer le mois précédent
+      if (now.day() === 1 && now.hour() >= 9) {
+        const firstDayPrevMonth = now.addDay(-1).firstDayOfMonth();
+        const lastMonthly = await getLastMonthlySummary();
+        if (!lastMonthly?.sameDay(firstDayPrevMonth)) {
+          await sendMonthlySummaries(firstDayPrevMonth);
+          await setLastMonthlySummary(firstDayPrevMonth);
         }
       }
     } catch (e) {
@@ -115,6 +125,27 @@ async function sendWeeklySummaries(monday: DateTime) {
       });
     } catch (e) {
       console.warn(lang.scheduler.weeklySummarySendError, userId, e);
+    }
+  }
+}
+
+async function sendMonthlySummaries(firstDay: DateTime) {
+  const channelFetched = await client.channels.fetch(channelId);
+  if (!channelFetched || !channelFetched.isTextBased()) return;
+  const textChannel = channelFetched as TextChannel;
+  const users = await listUsers();
+  for (const userId of users) {
+    try {
+      const user = await client.users.fetch(userId);
+      const data = await getDataForMonthlySummary(user, firstDay) as MonthlySummaryData;
+      if (data.days.every(d => d === null)) continue;
+      const img = await renderMonthlySummaryImage(data); // typage simple
+      await textChannel.send({
+        content: lang.scheduler.monthlySummaryMessage(userId, firstDay),
+        files: [{attachment: img, name: `monthly-${userId}-${firstDay.toDateString()}.png`}]
+      });
+    } catch (e) {
+      console.warn(lang.scheduler.monthlySummarySendError, userId, e);
     }
   }
 }
