@@ -137,7 +137,7 @@ export async function getDataForWeeklySummary(user: User, date: DateTime) {
     date,
     days: dates.map(date => u?.entries.find(e => e.date === date)?.steps ?? null),
     countEntries: u?._count.entries ?? 0,
-    avatarUrl: user.displayAvatarURL({extension: 'png', size: 128})
+    avatarUrl: user.displayAvatarURL({extension: 'png', size: 512})
   };
 
   if (u && u.stepsGoal !== null) {
@@ -201,7 +201,7 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
     date: firstDay,
     days: dates.map(date => u?.entries.find(e => e.date === date)?.steps ?? null),
     countEntries: u?._count.entries ?? 0,
-    avatarUrl: user.displayAvatarURL({extension: 'png', size: 128})
+    avatarUrl: user.displayAvatarURL({extension: 'png', size: 512})
   };
 
   if (u && u.stepsGoal !== null) {

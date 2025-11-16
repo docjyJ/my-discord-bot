@@ -217,7 +217,7 @@ export type MonthlySummaryData = {
 export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   const filledDays = data.days.filter((d): d is number => d !== null);
   const total = filledDays.reduce((acc, val) => acc + val, 0);
-  const average = filledDays.length > 0 ? Math.ceil(total / filledDays.length) : 0;
+  const average = filledDays.length > 0 ? total / filledDays.length : 0;
   const width = 1200;
   const height = 630;
 
@@ -256,7 +256,7 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   draw.text(resumeMoisLang.embed.fieldTotal(total), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
   currentLine++;
 
-  draw.text(resumeMoisLang.embed.fieldAverage(Math.round(average)), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
+  draw.text(resumeMoisLang.embed.fieldAverage(Math.floor(average)), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
   currentLine++;
 
   draw.text(resumeMoisLang.embed.fieldDaysEntered(data.countEntries), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
@@ -279,10 +279,11 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   const chartBg = draw.createLinearGradient(chartX, chartY, chartX + chartW, chartY + chartH, '#0b1220', '#0f172a');
   draw.roundedRectFill(chartX, chartY, chartW, chartH, 20, chartBg);
 
-  const innerX = chartX + pad;
-  const innerY = chartY + pad;
-  const innerW = chartW - pad * 2;
-  const innerH = chartH - pad * 2;
+  const innerPad = 20; // padding réduit pour plus d'espace
+  const innerX = chartX + innerPad;
+  const innerY = chartY + innerPad;
+  const innerW = chartW - innerPad * 2;
+  const innerH = chartH - innerPad * 2;
 
   const cols = 7;
   const labelHeight = 24; // espace réservé en haut pour les labels Lun..Dim
@@ -310,50 +311,53 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
     draw.text(dayLabel, x, y, '#94a3b8', 16);
   }
 
-  // Dessiner les cercles pour chaque jour
+  // Dessiner les anneaux pour chaque jour
+  const ringWidth = Math.max(4, Math.min(10, maxRadius * 0.20)); // trait plus fin
   for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
     const dayIndex = dayNum - 1;
     const steps = data.days[dayIndex];
 
-    // Calculer position dans la grille (0-indexed depuis lundi)
+    // Calculer position (0-index depuis lundi)
     const totalDays = firstWeekDay - 1 + dayNum;
-    const col = (totalDays - 1) % 7;
-    const row = Math.floor((totalDays - 1) / 7);
-
-    if (row >= rows) continue; // sécurité si 6e semaine dépasse (ne devrait pas arriver)
+    const col = (totalDays - 1) % cols;
+    const row = Math.floor((totalDays - 1) / cols);
+    if (row >= rows) continue;
 
     const x = innerX + col * (cellW + gapX) + cellW / 2;
     const y = innerY + labelHeight + row * (cellH + gapY) + cellH / 2;
 
-    let radius = maxRadius * 0.8;
-    let color: string | ReturnType<typeof draw.createLinearGradient>;
+    // Anneau de fond
+    draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, '#111827');
 
+    let showSteps = false;
     if (steps !== null) {
-      if (data.goal !== null && steps >= data.goal) {
-        // Objectif atteint - cercle vert
-        color = draw.createLinearGradient(x - radius, y, x + radius, y, '#22c55e', '#84cc16');
-      } else if (data.goal !== null) {
-        // Objectif non atteint - cercle bleu avec diamètre proportionnel (min 20%)
-        const ratio = Math.max(0.2, steps / data.goal);
-        radius = maxRadius * 0.8 * ratio;
-        color = draw.createLinearGradient(x - radius, y, x + radius, y, '#60a5fa', '#c084fc');
+      if (data.goal !== null && data.goal > 0) {
+        const progress = Math.min(1, steps / data.goal);
+        const grad = draw.createLinearGradient(x - maxRadius, y, x + maxRadius, y, progress >= 1 ? '#22c55e' : '#60a5fa', progress >= 1 ? '#84cc16' : '#c084fc');
+        if (progress >= 1) {
+          // cercle complet succès
+          draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, grad);
+        } else if (progress > 0) {
+          // arc partiel
+          draw.drawArc(x, y, maxRadius * 0.8, ringWidth, grad, -0.25, progress - 0.25);
+        }
       } else {
-        // Pas d'objectif - cercle bleu plein
-        color = draw.createLinearGradient(x - radius, y, x + radius, y, '#60a5fa', '#c084fc');
+        // pas d'objectif -> anneau bleu complet
+        const grad = draw.createLinearGradient(x - maxRadius, y, x + maxRadius, y, '#60a5fa', '#c084fc');
+        draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, grad);
       }
-      draw.fillCircle(x, y, radius, color);
-
-      // Afficher le nombre de pas en format "X,Y k"
-      const stepsK = steps / 1000;
-      const stepsText = stepsK >= 10 ? `${Math.floor(stepsK)} k` : `${stepsK.toFixed(1).replace('.', ',')} k`;
-      draw.text(stepsText, x, y, '#ffffff', 12);
+      showSteps = true;
     } else {
-      // Pas de données - petit cercle gris
-      radius = maxRadius * 0.3;
-      draw.fillCircle(x, y, radius, '#374151');
+      // Pas de données: anneau gris déjà là, pas de texte
     }
 
-    // Label du numéro du jour en dessous
+    // Texte des pas (valeur complète) si présent
+    if (showSteps) {
+      const val = steps as number;
+      draw.text(`${val}`, x, y, '#ffffff', 14);
+    }
+
+    // Label du numéro du jour
     const labelY = y + maxRadius * 0.8 + 14;
     draw.text(`${dayNum}`, x, labelY, '#64748b', 14);
   }
