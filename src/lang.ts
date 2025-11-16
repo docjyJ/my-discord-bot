@@ -100,3 +100,4 @@ export const resumeSemaine = {
     title: (monday: DateTime) => `Semaine du ${monday.shortLocalDate(fr)} au ${monday.addDay(6).shortLocalDate(fr, true)}`
   }
 };
+

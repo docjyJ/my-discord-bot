@@ -84,7 +84,7 @@ export async function cleanDatabase() {
 export async function getStreak(userId: string, end: DateTime) {
   const user = await prisma.user.findUnique({where: {userId}, select: {stepsGoal: true}});
   const goal = user?.stepsGoal ?? null;
-  if (!goal || goal <= 0) return {streak: 0, goal: null};
+  if (!goal || goal <= 0) return {streak: null, goal: null};
   const windowDays = 60;
   const start = end.addDay(1 - windowDays);
   const dates: string[] = [];
@@ -106,38 +106,12 @@ export async function getStreak(userId: string, end: DateTime) {
   return {streak, goal};
 }
 
-export async function getDataForWeeklySummary(user: User, monday: DateTime) {
+export async function getDataForWeeklySummary(user: User, date: DateTime) {
   const userId = user.id;
-
-  async function getStreakAndSuccesses(gte: number) {
-    const entries = await prisma.dailyEntry.findMany({
-      select: {date: true},
-      where: {userId, steps: {gte}},
-      orderBy: {date: 'asc'}
-    });
-
-    let currentStreak = 0;
-    let prevDate: DateTime | null = null;
-    let bestStreak = 0;
-
-    for (const {date: dateStr} of entries) {
-      const date = DateTime.parse(dateStr);
-      if (date !== null) {
-        if (prevDate !== null && prevDate.addDay(1).toDateString() === dateStr) {
-          currentStreak++;
-        } else {
-          currentStreak = 1;
-        }
-        bestStreak = Math.max(bestStreak, currentStreak);
-        prevDate = date;
-      }
-    }
-    return [bestStreak, entries.length] as const;
-  }
 
   const dates: string[] = [];
   for (let i = 0; i < 7; i++) {
-    dates.push(monday.addDay(i).toDateString());
+    dates.push(date.addDay(i).toDateString());
   }
 
   const u = await prisma.user.findUnique({
@@ -149,21 +123,48 @@ export async function getDataForWeeklySummary(user: User, monday: DateTime) {
     }
   });
 
-  const [bestStreak, countSuccesses] = u && u.stepsGoal !== null ? await getStreakAndSuccesses(u.stepsGoal) : [0, 0];
+  const data = {
+    date,
+    days: dates.map(date => u?.entries.find(e => e.date === date)?.steps ?? null),
+    countEntries: u?._count.entries ?? 0,
+    avatarUrl: user.displayAvatarURL({extension: 'png', size: 128})
+  };
 
-  return {
-    week: {
-      monday,
-      days: dates.map(date => u?.entries.find(e => e.date === date)?.steps ?? null)
-    },
-    allTime: {
-      bestStreak,
-      countEntries: u?._count.entries ?? 0,
-      countSuccesses
-    },
-    user: {
-      avatarUrl: user.displayAvatarURL({extension: 'png', size: 128}),
-      goal: u?.stepsGoal ?? null
+  if (u && u.stepsGoal !== null) {
+    const entries = await prisma.dailyEntry.findMany({
+      select: {date: true},
+      where: {userId, steps: {gte: u.stepsGoal}},
+      orderBy: {date: 'asc'}
+    });
+
+    let currentStreak = 0;
+    let prevDate: DateTime | null = null;
+    let bestStreak = 0;
+
+    for (const {date: dateStr} of entries) {
+      const date = DateTime.parse(dateStr);
+      if (date !== null) {
+        // biome-ignore lint/complexity/useOptionalChain: : error TS2339: Property 'addDay' does not exist on type 'never'.
+        if (prevDate !== null && prevDate.addDay(1).sameDay(date)) currentStreak++;
+        else currentStreak = 1;
+
+        bestStreak = Math.max(bestStreak, currentStreak);
+        prevDate = date;
+      }
     }
-  } as WeeklySummaryData;
+    return {
+      ...data,
+      goal: u.stepsGoal,
+      bestStreak,
+      countSuccesses: entries.length
+    } as WeeklySummaryData;
+  } else {
+    return {
+      ...data,
+      goal: null,
+      bestStreak: null,
+      countSuccesses: null
+    } as WeeklySummaryData;
+  }
 }
+

@@ -3,17 +3,24 @@ import {resumeSemaine as resumeLang, saisir} from '../lang';
 import Draw, {downloadImage} from './draw';
 
 export type PresentationOptions = {
-  avatarUrl: string;
   date: DateTime;
   steps: number;
-  goal: number | null;
-  streak: number;
-};
+  avatarUrl: string;
+} & (
+  | {
+      goal: number;
+      streak: number;
+    }
+  | {
+      goal: null;
+      streak: null;
+    }
+);
 
 export async function renderPresentationImage(opts: PresentationOptions) {
   const goal = opts.goal === null || opts.goal < 0 ? 0 : opts.goal;
   const steps = opts.steps < 0 ? 0 : opts.steps;
-  const streak = opts.streak < 0 ? 0 : opts.streak;
+  const streak = opts.streak === null || opts.streak < 0 ? 0 : opts.streak;
 
   const width = 1200;
   const height = 630;
@@ -37,7 +44,7 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 
   const widget_radius = radius - padding - arcWidth / 2;
 
-  const progress = goal !== 0 && steps !== 0 ? (goal > steps ? (steps / goal) * 0.96 + 0.2 : 1) : 0;
+  const progress = goal !== 0 && steps !== 0 ? (goal > steps ? (steps / goal) * 0.98 : 1) : 0;
   draw.drawCircle(right_x, h_center, widget_radius, arcWidth, '#374151');
   if (progress === 1) {
     const grad = draw.createLinearGradient(right_x - widget_radius, h_center, right_x + widget_radius, h_center, '#22c55e', '#84cc16');
@@ -74,23 +81,25 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 }
 
 export type WeeklySummaryData = {
-  week: {
-    monday: DateTime;
-    days: (number | null)[];
-  };
-  allTime: {
-    bestStreak: number;
-    countEntries: number;
-    countSuccesses: number;
-  };
-  user: {
-    avatarUrl: string;
-    goal: number | null;
-  };
-};
+  date: DateTime;
+  days: (number | null)[];
+  countEntries: number;
+  avatarUrl: string;
+} & (
+  | {
+      goal: number;
+      bestStreak: number;
+      countSuccesses: number;
+    }
+  | {
+      goal: null;
+      bestStreak: null;
+      countSuccesses: null;
+    }
+);
 
 export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
-  const filledDays = data.week.days.filter((d): d is number => d !== null);
+  const filledDays = data.days.filter((d): d is number => d !== null);
   const total = filledDays.reduce((acc, val) => acc + val, 0);
   const average = filledDays.length > 0 ? Math.ceil(total / filledDays.length) : 0;
   const width = 1200;
@@ -98,7 +107,7 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
 
   const draw = new Draw(width, height);
 
-  const title = resumeLang.image.title(data.week.monday);
+  const title = resumeLang.image.title(data.date);
 
   draw.text(title, width / 2, 40, '#f8fafc', 42);
 
@@ -119,7 +128,7 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
   const avatar = {x: pad + avatarRadius + leftAvatarPad, y: topPad + avatarRadius, radius: avatarRadius};
 
   draw.backgroundCircle(avatar.x, avatar.y, avatar.radius);
-  draw.avatarCircle(avatar.x, avatar.y, avatar.radius - 6, await downloadImage(data.user.avatarUrl));
+  draw.avatarCircle(avatar.x, avatar.y, avatar.radius - 6, await downloadImage(data.avatarUrl));
 
   const cardBg = draw.createLinearGradient(pad, statsY, pad + cardW, statsY + cardH, '#0b1220', '#0f172a');
   draw.roundedRectFill(pad, statsY, cardW, cardH, 18, cardBg);
@@ -134,14 +143,14 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
   draw.text(resumeLang.embed.fieldAverage(Math.round(average)), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
   currentLine++;
 
-  draw.text(resumeLang.embed.fieldDaysEntered(data.allTime.countEntries), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
+  draw.text(resumeLang.embed.fieldDaysEntered(data.countEntries), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
   currentLine++;
 
-  if (data.user.goal !== null) {
-    draw.text(resumeLang.embed.fieldDaysSucceeded(data.allTime.countSuccesses), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
+  if (data.goal !== null) {
+    draw.text(resumeLang.embed.fieldDaysSucceeded(data.countSuccesses), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
     currentLine++;
 
-    draw.text(resumeLang.embed.fieldBestStreak(data.allTime.bestStreak), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
+    draw.text(resumeLang.embed.fieldBestStreak(data.bestStreak), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
     currentLine++;
   }
 
@@ -153,7 +162,7 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
   const chartBg = draw.createLinearGradient(chartX, chartY, chartX + chartW, chartY + chartH, '#0b1220', '#0f172a');
   draw.roundedRectFill(chartX, chartY, chartW, chartH, 20, chartBg);
 
-  const maxVal = Math.max(data.user.goal ?? 0, ...data.week.days.map(d => d ?? 0), 1);
+  const maxVal = Math.max(data.goal ?? 0, ...filledDays, 1);
   const innerX = chartX + pad;
   const innerY = chartY + pad;
   const innerW = chartW - pad * 2;
@@ -163,7 +172,7 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
   const gap = 18;
   const barW = Math.floor((innerW - gap * (n - 1)) / n);
   for (let i = 0; i < n; i++) {
-    const val = data.week.days[i];
+    const val = data.days[i];
 
     draw.roundedRectFill(innerX + i * (barW + gap), innerY, barW, innerH, 10, '#111827');
 
@@ -171,8 +180,8 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
     const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
     const by = innerY + innerH - h;
     if (val !== null) {
-      const topColor = data.user.goal && val >= data.user.goal ? '#22c55e' : '#60a5fa';
-      const bottomColor = data.user.goal && val >= data.user.goal ? '#84cc16' : '#c084fc';
+      const topColor = data.goal && val >= data.goal ? '#22c55e' : '#60a5fa';
+      const bottomColor = data.goal && val >= data.goal ? '#84cc16' : '#c084fc';
       const g = draw.createLinearGradient(bx, by, bx, innerY + innerH, topColor, bottomColor);
       draw.roundedRectFill(bx, by, barW, h, 10, g);
       draw.text(`${val}`, bx + barW / 2, by - 16, '#e5e7eb', 20);

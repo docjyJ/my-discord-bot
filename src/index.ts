@@ -106,7 +106,7 @@ async function sendWeeklySummaries(monday: DateTime) {
       const user = await client.users.fetch(userId);
       const data = await getDataForWeeklySummary(user, monday);
 
-      if (data.week.days.every(d => d === null)) continue;
+      if (data.days.every(d => d === null)) continue;
       const img = await renderWeeklySummaryImage(data);
 
       await textChannel.send({

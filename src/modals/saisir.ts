@@ -24,14 +24,13 @@ async function getModal(date: DateTime, userId?: string) {
 }
 
 async function buildAttachmentFor(interaction: ModalSubmitInteraction, date: DateTime, steps: number) {
-  const {streak, goal} = await getStreak(interaction.user.id, date);
+  const streakGoal = await getStreak(interaction.user.id, date);
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
   const img = await renderPresentationImage({
     avatarUrl,
     date,
     steps,
-    goal,
-    streak
+    ...streakGoal
   });
   return new AttachmentBuilder(img, {name: `progress-${interaction.user.id}-${date.toDateString()}.png`});
 }
