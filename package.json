@@ -15,7 +15,8 @@
     "render:weekly": "tsx src/image/try-weekly.ts",
     "biome": "biome check",
     "biome:fix": "biome check --fix",
-    "check": "pnpm typecheck && pnpm biome"
+    "check": "pnpm typecheck && pnpm biome",
+    "generate:data": "tsx src/scripts/generate-random-data.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.80",
