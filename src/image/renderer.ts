@@ -392,7 +392,15 @@ export type MonthlySummaryData = {
       bestStreak: null;
       countSuccesses: null;
     }
-);
+) &
+  (
+    | {
+        weeklyGoal: null;
+      }
+    | {
+        weeklyGoal: number;
+      }
+  );
 
 export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   const filledDays = data.days.filter((d): d is number => d !== null);
@@ -511,21 +519,63 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
 
     let showSteps = false;
     if (steps !== null) {
-      if (data.goal !== null && data.goal > 0) {
-        const progress = Math.min(1, steps / data.goal);
-        const grad = draw.createLinearGradient(x - maxRadius, y, x + maxRadius, y, progress >= 1 ? '#22c55e' : '#60a5fa', progress >= 1 ? '#84cc16' : '#c084fc');
-        if (progress >= 1) {
-          // cercle complet succès
-          draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, grad);
-        } else if (progress > 0) {
-          // arc partiel
-          draw.drawArc(x, y, maxRadius * 0.8, ringWidth, grad, -0.25, progress - 0.25);
+      const hasDailyGoal = data.goal !== null && data.goal > 0;
+      const weeklyGoalValid = data.weeklyGoal !== null && data.weeklyGoal > 0;
+
+      // Calcul de la semaine (lun..dim) contenant ce jour, et de son total
+      // row = index de la semaine dans la grille (0 = première semaine affichée)
+      const startDayNumOfWeek = 1 - (firstWeekDay - 1) + row * 7; // peut être <= 0
+      const endDayNumOfWeek = startDayNumOfWeek + 6;
+
+      let weekTotal = 0;
+      for (let d = startDayNumOfWeek; d <= endDayNumOfWeek; d++) {
+        if (d < 1 || d > daysInMonth) continue;
+        const v = data.days[d - 1];
+        if (v !== null) weekTotal += v;
+      }
+
+      const weeklySucceeded = weeklyGoalValid && weekTotal >= (data.weeklyGoal as number);
+
+      let topColor: string;
+      let bottomColor: string;
+
+      if (!hasDailyGoal) {
+        // Pas d'objectif journalier
+        if (!weeklyGoalValid) {
+          // Pas d'objectif jour ni hebdo => bleu
+          topColor = '#60a5fa';
+          bottomColor = '#c084fc';
+        } else if (weeklySucceeded) {
+          // Objectif hebdo présent et semaine réussie => jaune
+          topColor = '#eab308';
+          bottomColor = '#f1dd89';
+        } else {
+          // Objectif hebdo présent mais semaine échouée => bleu
+          topColor = '#60a5fa';
+          bottomColor = '#c084fc';
         }
       } else {
-        // pas d'objectif -> anneau bleu complet
-        const grad = draw.createLinearGradient(x - maxRadius, y, x + maxRadius, y, '#60a5fa', '#c084fc');
-        draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, grad);
+        // Objectif journalier présent
+        if (steps >= (data.goal as number)) {
+          // jour réussi
+          if (weeklyGoalValid && weeklySucceeded) {
+            // si hebdo présent et semaine réussie => jaune
+            topColor = '#eab308';
+            bottomColor = '#f1dd89';
+          } else {
+            // sinon vert
+            topColor = '#22c55e';
+            bottomColor = '#84cc16';
+          }
+        } else {
+          // jour non atteint => bleu
+          topColor = '#60a5fa';
+          bottomColor = '#c084fc';
+        }
       }
+
+      const grad = draw.createLinearGradient(x - maxRadius, y, x + maxRadius, y, topColor, bottomColor);
+      draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, grad);
       showSteps = true;
     } else {
       // Pas de données: anneau gris déjà là, pas de texte

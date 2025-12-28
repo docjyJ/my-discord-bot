@@ -218,6 +218,7 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
   type MonthlyUserSelect = Prisma.UserGetPayload<{
     select: {
       dailyStepsGoal: true;
+      weeklyStepsGoal: true;
       entries: {where: {date: {in: string[]}}};
       _count: {select: {entries: {where: {steps: {not: null}}}}};
     };
@@ -227,6 +228,7 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
     where: {userId},
     select: {
       dailyStepsGoal: true,
+      weeklyStepsGoal: true,
       entries: {where: {date: {in: dates}}},
       _count: {select: {entries: {where: {steps: {not: null}}}}}
     }
@@ -239,7 +241,8 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
     avatarUrl: user.displayAvatarURL({extension: 'png', size: 512}),
     goal: null,
     bestStreak: null,
-    countSuccesses: null
+    countSuccesses: null,
+    weeklyGoal: u?.weeklyStepsGoal ?? null
   };
 
   if (u && u.dailyStepsGoal !== null) {
