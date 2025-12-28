@@ -30,7 +30,11 @@ async function buildAttachmentFor(interaction: ModalSubmitInteraction, date: Dat
     avatarUrl,
     date,
     steps,
-    ...streakGoal
+    ...streakGoal,
+    // pas d'info hebdo ici depuis getStreak -> fournir nulls
+    weeklyGoal: null,
+    weeklyRemainingSteps: null,
+    weeklyRemainingDays: null
   });
   return new AttachmentBuilder(img, {name: `progress-${interaction.user.id}-${date.toDateString()}.png`});
 }

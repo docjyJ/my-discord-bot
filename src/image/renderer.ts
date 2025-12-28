@@ -205,8 +205,6 @@ export type WeeklySummaryData = {
   days: (number | null)[];
   countEntries: number;
   avatarUrl: string;
-  weeklyGoal?: number | null;
-  totalWeekSteps?: number;
 } & (
   | {
       goal: number;
@@ -217,6 +215,13 @@ export type WeeklySummaryData = {
       goal: null;
       bestStreak: null;
       countSuccesses: null;
+    }
+) & (
+  | {
+      weeklyGoal: null;
+    }
+  | {
+      weeklyGoal: number;
     }
 );
 
@@ -302,8 +307,60 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
     const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
     const by = innerY + innerH - h;
     if (val !== null) {
-      const topColor = data.goal && val >= data.goal ? '#22c55e' : '#60a5fa';
-      const bottomColor = data.goal && val >= data.goal ? '#84cc16' : '#c084fc';
+      // Déterminer si l'utilisateur a un objectif hebdo valide
+      const weeklyGoalValid = data.weeklyGoal !== null && data.weeklyGoal > 0;
+      const weeklySucceeded = weeklyGoalValid && total >= (data.weeklyGoal as number);
+
+      // L'utilisateur a-t-il un objectif journalier ?
+      const hasDailyGoal = data.goal !== null && data.goal > 0;
+
+      let topColor: string;
+      let bottomColor: string;
+
+      if (!hasDailyGoal) {
+        // Cas: pas d'objectif journalier
+        if (!weeklyGoalValid) {
+          // Pas d'objectif jour ni hebdo => comportement par défaut : barres bleu
+          topColor = '#60a5fa';
+          bottomColor = '#c084fc';
+        } else {
+          // Pas d'objectif jour mais il y a un objectif hebdo
+          if (weeklySucceeded) {
+            // Semaine réussie => colorer en jaune seulement les jours où il y a des pas (>0)
+            if ((val as number) > 0) {
+              topColor = '#eab308';
+              bottomColor = '#f1dd89';
+            } else {
+              // pas de pas enregistrés -> rester bleu
+              topColor = '#60a5fa';
+              bottomColor = '#c084fc';
+            }
+          } else {
+            // Semaine échouée => barres bleues
+            topColor = '#60a5fa';
+            bottomColor = '#c084fc';
+          }
+        }
+      } else {
+        // Cas: il y a un objectif journalier
+        if (val >= data.goal) {
+          // Jour "réussi"
+          if (weeklyGoalValid && weeklySucceeded) {
+            // Si objectif hebdo présent et semaine réussie => jaune
+            topColor = '#eab308';
+            bottomColor = '#f1dd89';
+          } else {
+            // Sinon garder vert pour jours réussis
+            topColor = '#22c55e';
+            bottomColor = '#84cc16';
+          }
+        } else {
+          // Jour non atteint => bleu
+          topColor = '#60a5fa';
+          bottomColor = '#c084fc';
+        }
+      }
+
       const g = draw.createLinearGradient(bx, by, bx, innerY + innerH, topColor, bottomColor);
       draw.roundedRectFill(bx, by, barW, h, 10, g);
       draw.text(`${val}`, bx + barW / 2, by - 16, '#e5e7eb', 20);

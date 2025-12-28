@@ -10,7 +10,7 @@ import {
   getDataForMonthlySummary,
   getDataForWeeklySummary,
   getEntry,
-  getGoal,
+  getDailyGoal,
   getLastDailyPrompt,
   getLastMonthlySummary,
   getLastWeeklySummary,
@@ -97,7 +97,7 @@ async function sendDailyPrompts(now: DateTime) {
   const users = await listUsers();
   const notFilled: string[] = [];
   for (const userId of users) {
-    const stepsGoal = await getGoal(userId);
+    const stepsGoal = await getDailyGoal(userId);
     if (!stepsGoal || stepsGoal === 0) continue;
     const steps = await getEntry(userId, now);
     if (steps === null) notFilled.push(userId);
