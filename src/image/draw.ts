@@ -71,7 +71,21 @@ export default class Draw {
     this.ctx.font = `bold ${fontSize}px DejaVuSans`;
     this.ctx.textAlign = align;
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(text, x, y);
+    // Support multi-line text by splitting on '\n' and vertically centering the block
+    const lines = String(text).split('\n');
+    if (lines.length === 1) {
+      this.ctx.fillText(text, x, y);
+      return;
+    }
+
+    const lineHeight = Math.round(fontSize * 1.2);
+    // center the block at y: compute offset for each line
+    const midIndex = (lines.length - 1) / 2;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const offset = (i - midIndex) * lineHeight;
+      this.ctx.fillText(line, x, y + offset);
+    }
   }
 
   public drawCircle(x: number, y: number, radius: number, width: number, color: string | CanvasGradient) {

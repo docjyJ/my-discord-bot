@@ -11,9 +11,10 @@ datasource db {
 }
 
 model User {
-  userId    String       @id
-  stepsGoal Int?
-  entries   DailyEntry[]
+  userId          String       @id
+  dailyStepsGoal  Int?
+  weeklyStepsGoal Int?
+  entries         DailyEntry[]
 }
 
 model DailyEntry {

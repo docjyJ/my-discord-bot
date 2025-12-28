@@ -2,11 +2,23 @@ import {ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, Events, GatewayInt
 import {commandsExecutors} from './commands';
 import DateTime from './date-time';
 import {deployCommands} from './deploy-commands';
-import {renderWeeklySummaryImage, renderMonthlySummaryImage, type MonthlySummaryData} from './image/renderer';
+import {type MonthlySummaryData, renderMonthlySummaryImage, renderWeeklySummaryImage} from './image/renderer';
 import {lang, saisir as saisirLang} from './lang';
 import {getSaisirModal, modalsExecutor} from './modals';
 import {channelId, guildId, token} from './secrets';
-import {getDataForWeeklySummary, getEntry, getGoal, getLastDailyPrompt, getLastWeeklySummary, listUsers, setLastDailyPrompt, setLastWeeklySummary, getLastMonthlySummary, setLastMonthlySummary, getDataForMonthlySummary} from './storage';
+import {
+  getDataForMonthlySummary,
+  getDataForWeeklySummary,
+  getEntry,
+  getGoal,
+  getLastDailyPrompt,
+  getLastMonthlySummary,
+  getLastWeeklySummary,
+  listUsers,
+  setLastDailyPrompt,
+  setLastMonthlySummary,
+  setLastWeeklySummary
+} from './storage';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages]
@@ -137,7 +149,7 @@ async function sendMonthlySummaries(firstDay: DateTime) {
   for (const userId of users) {
     try {
       const user = await client.users.fetch(userId);
-      const data = await getDataForMonthlySummary(user, firstDay) as MonthlySummaryData;
+      const data = (await getDataForMonthlySummary(user, firstDay)) as MonthlySummaryData;
       if (data.days.every(d => d === null)) continue;
       const img = await renderMonthlySummaryImage(data); // typage simple
       await textChannel.send({

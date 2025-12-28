@@ -32,23 +32,32 @@ export const lang = {
 
 export const objectif = {
   command: {
-    description: 'Afficher ou définir un objectif quotidien',
+    description: 'Afficher ou définir un objectif quotidien et/ou hebdomadaire',
     optionUtilisateurDescription: 'Utilisateur cible (défaut: toi)'
   },
   modal: {
-    title: 'Définir mon objectif',
+    title: 'Définir mes objectifs',
     stepLabel: 'Objectif de pas par jour',
-    stepPlaceholder: '8000'
+    stepPlaceholder: '8000',
+    weeklyStepLabel: 'Objectif de pas par semaine',
+    weeklyStepPlaceholder: '70000'
   },
   replyAction: {
-    noGoal: (userId: string) => `<@${userId}> a supprimé son objectif.`,
-    noChange: "Tu n'as pas changé ton objectif.",
-    goal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${goal} pas par jour.`,
+    noDailyGoal: (userId: string) => `<@${userId}> a supprimé son objectif quotidien.`,
+    noWeeklyGoal: (userId: string) => `<@${userId}> a supprimé son objectif hebdomadaire.`,
+    noChange: "Tu n'as pas changé tes objectifs.",
+    dailyGoal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${goal} pas par jour.`,
+    weeklyGoal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${goal} pas par semaine.`,
     invalidValue: 'valeur invalide: doit être un entier >= 0.'
   },
   replySelect: {
     noGoal: (userId: string) => `<@${userId}> n'a pas d'objectif.`,
-    goal: (userId: string, goal: number) => `<@${userId}> a un objectif de ${goal} pas par jour.`
+    goals: (userId: string, dailyGoal: number | null, weeklyGoal: number | null) => {
+      const parts: string[] = [];
+      if (dailyGoal !== null) parts.push(`objectif de ${dailyGoal} pas par jour`);
+      if (weeklyGoal !== null) parts.push(`objectif de ${weeklyGoal} pas par semaine`);
+      return `<@${userId}> a ${parts.join(' et ')}.`;
+    }
   }
 };
 
@@ -79,7 +88,17 @@ export const saisir = {
     dateTitle: (date: DateTime) => date.fullLocalDate(fr),
     streak: (days: number) => (days === 1 ? '1 jour' : `${days} jours`),
     reached: 'Félicitations, tu as atteint ton objectif.',
-    remaining: (remaining: number) => `Il te reste ${remaining} pas pour atteindre ton objectif.`
+    remaining: (remaining: number) => `Il te reste ${remaining} pas pour atteindre ton objectif.`,
+    weekly: {
+      message1: (remaining: number, perDay: number) => `Il te reste ${remaining} pas (soit ${perDay} par jour) pour réussir ton objectif hebdomadaire.`,
+      message2: (remaining: number) => `Il te reste ${remaining} pas pour réussir ton objectif hebdomadaire.`,
+      message3: 'Félicitation tu a atein ton objectif hebdomadaire',
+      message4: 'Félicitation tu as réussi ton objectif journalier',
+      message5: (remaining: number) => `Félicitation tu as réussi ton objectif journalier.\nIl te reste ${remaining} pas pour réussir ton objectif hebdomadaire.`,
+      message6: (remaining: number, perDay: number) =>
+        `Félicitation tu as réussi ton objectif journalier.\nIl te reste ${remaining} pas (soit ${perDay} par jour) pour réussir ton objectif hebdomadaire.`,
+      message7: 'Félicitation tu as réussi ton objectif journalier et hebdomadaire'
+    }
   }
 };
 

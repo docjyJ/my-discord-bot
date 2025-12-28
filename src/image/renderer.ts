@@ -15,9 +15,105 @@ export type PresentationOptions = {
       goal: null;
       streak: null;
     }
-);
+) &
+  (
+    | {
+        weeklyGoal: null;
+        weeklyRemainingSteps: null;
+        weeklyRemainingDays: null;
+      }
+    | {
+        weeklyGoal: number;
+        weeklyRemainingSteps: number;
+        weeklyRemainingDays: number;
+      }
+  );
+
+function computeWeeklyMessage(opts: PresentationOptions): {message: string | null; weeklySucceeded: boolean} {
+  // Cas sans objectif hebdo : aucun message
+  if (opts.weeklyGoal === null) {
+    return {message: null, weeklySucceeded: false};
+  }
+
+  const weeklyGoal = opts.weeklyGoal;
+  const remainingSteps = Math.max(0, opts.weeklyRemainingSteps);
+  const remainingDays = Math.max(0, opts.weeklyRemainingDays);
+
+  if (weeklyGoal <= 0) {
+    return {message: null, weeklySucceeded: false};
+  }
+
+  const weeklySucceeded = remainingSteps <= 0;
+
+  const hasDailyGoal = opts.goal !== null && opts.goal > 0;
+  const dailySucceeded = hasDailyGoal && opts.steps >= (opts.goal as number);
+
+  let perDay: number | null = null;
+  if (!weeklySucceeded && remainingDays > 0) {
+    perDay = Math.ceil(remainingSteps / remainingDays);
+  } else if (!weeklySucceeded && remainingDays === 0) {
+    perDay = 0;
+  }
+
+  if (!weeklySucceeded && remainingSteps === 0) {
+    // sécurité: si on nous donne 0 restant mais weeklySucceeded attendu faux
+    return {message: null, weeklySucceeded};
+  }
+
+  // Implémentation de la matrice de messages
+  //  - lignes: état objectif journalier (pas d’objectif / incomplet / réussi)
+  //  - colonnes: état objectif hebdo (pas d’objectif / incomplet / réussi)
+
+  if (weeklySucceeded) {
+    // Colonne "Obj réusi"
+    if (dailySucceeded) {
+      // case 7
+      return {message: saisir.image.weekly.message7, weeklySucceeded};
+    }
+    // case 3
+    return {message: saisir.image.weekly.message3, weeklySucceeded};
+  }
+
+  // Hebdo incomplet
+  if (remainingDays > 1) {
+    // Colonne "Obj incomplet reste plusieurs jours" => messages 1 ou 6
+    if (!hasDailyGoal || !dailySucceeded) {
+      // Ligne "Pas Obj" ou "Obj incomplet": case 1
+      if (perDay !== null) {
+        return {message: saisir.image.weekly.message1(remainingSteps, perDay), weeklySucceeded};
+      }
+      return {message: null, weeklySucceeded};
+    }
+    // Ligne "Obj réusi": case 6
+    if (perDay !== null) {
+      return {message: saisir.image.weekly.message6(remainingSteps, perDay), weeklySucceeded};
+    }
+    return {message: saisir.image.weekly.message5(remainingSteps), weeklySucceeded};
+  }
+
+  if (remainingDays === 1) {
+    // Colonne "Obj incomplet reste 1 jour" => messages 2 ou 5
+    if (!hasDailyGoal || !dailySucceeded) {
+      // Ligne "Pas Obj" ou "Obj incomplet": case 2
+      return {message: saisir.image.weekly.message2(remainingSteps), weeklySucceeded};
+    }
+    // Ligne "Obj réusi": case 5
+    return {message: saisir.image.weekly.message5(remainingSteps), weeklySucceeded};
+  }
+
+  // remainingDays === 0 et hebdo non réussi
+  // Colonne "Obj incomplet reste 0 jour" => 0 en haut, 4 sur dernière ligne
+  if (dailySucceeded) {
+    // case 4
+    return {message: saisir.image.weekly.message4, weeklySucceeded};
+  }
+
+  // case 0
+  return {message: null, weeklySucceeded};
+}
 
 export async function renderPresentationImage(opts: PresentationOptions) {
+  console.log('Rendering presentation image with options:', opts);
   const goal = opts.goal === null || opts.goal < 0 ? 0 : opts.goal;
   const steps = opts.steps < 0 ? 0 : opts.steps;
   const streak = opts.streak === null || opts.streak < 0 ? 0 : opts.streak;
@@ -46,9 +142,25 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 
   const progress = goal !== 0 && steps !== 0 ? (goal > steps ? (steps / goal) * 0.98 : 1) : 0;
   draw.drawCircle(right_x, h_center, widget_radius, arcWidth, '#374151');
-  if (progress === 1) {
-    const grad = draw.createLinearGradient(right_x - widget_radius, h_center, right_x + widget_radius, h_center, '#22c55e', '#84cc16');
+
+  const {message: weeklyMessage, weeklySucceeded} = computeWeeklyMessage(opts);
+
+  // If there is no daily goal but there is a weekly goal, draw a yellow ring to indicate weekly tracking
+  const hasDailyGoal = opts.goal !== null && opts.goal > 0;
+  const dailySucceeded = hasDailyGoal && steps >= (opts.goal as number);
+  if (!hasDailyGoal && weeklySucceeded) {
+    const grad = draw.createLinearGradient(right_x - widget_radius, h_center, right_x + widget_radius, h_center, '#eab308', '#f1dd89');
     draw.drawCircle(right_x, h_center, widget_radius, arcWidth, grad);
+  }
+
+  if (progress === 1) {
+    if (weeklySucceeded) {
+      const grad = draw.createLinearGradient(right_x - widget_radius, h_center, right_x + widget_radius, h_center, '#eab308', '#f1dd89');
+      draw.drawCircle(right_x, h_center, widget_radius, arcWidth, grad);
+    } else {
+      const grad = draw.createLinearGradient(right_x - widget_radius, h_center, right_x + widget_radius, h_center, '#22c55e', '#84cc16');
+      draw.drawCircle(right_x, h_center, widget_radius, arcWidth, grad);
+    }
   } else if (progress !== 0) {
     const grad = draw.createLinearGradient(right_x - widget_radius, h_center, right_x + widget_radius, h_center, '#60a5fa', '#c084fc');
     draw.drawArc(right_x, h_center, widget_radius, arcWidth, grad, -0.25, progress - 0.25);
@@ -68,13 +180,21 @@ export async function renderPresentationImage(opts: PresentationOptions) {
   if (progress === 1 && streak !== 0) {
     const badgeX = right_x + widget_radius - 36;
     const badgeY = h_center - widget_radius + 36;
-    draw.roundedRectFill(badgeX - 56, badgeY - 24, 112, 48, 14, '#16a34a');
-    draw.text(saisir.image.streak(streak), badgeX, badgeY, '#f8fafc', 24);
+    const badgeColor = weeklySucceeded ? '#eab308' : '#16a34a';
+    draw.roundedRectFill(badgeX - 56, badgeY - 24, 112, 48, 14, badgeColor);
+    draw.text(saisir.image.streak(streak), badgeX, badgeY, '#0b1120', 24);
   }
 
-  if (goal !== 0) {
-    const txt = steps >= goal ? saisir.image.reached : saisir.image.remaining(goal - steps);
-    draw.text(txt, width / 2, height - 36, '#cbd5e1', 30);
+  // Texte de bas de carte : uniquement la matrice hebdomadaire
+  // If no weekly message but daily succeeded and there's no weekly goal, show the daily success message
+  let bottomMessage: string | null = weeklyMessage;
+  if (!bottomMessage && opts.weeklyGoal === null && dailySucceeded) {
+    bottomMessage = saisir.image.weekly.message4;
+  }
+
+  if (bottomMessage) {
+    const color = '#e5e7eb';
+    draw.text(bottomMessage, width / 2, height - 60, color, 30);
   }
 
   return draw.toBuffer();
@@ -85,6 +205,8 @@ export type WeeklySummaryData = {
   days: (number | null)[];
   countEntries: number;
   avatarUrl: string;
+  weeklyGoal?: number | null;
+  totalWeekSteps?: number;
 } & (
   | {
       goal: number;
@@ -297,7 +419,7 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   const firstDay = data.date.firstDayOfMonth();
   const firstWeekDay = firstDay.weekDay(); // 1 = lundi, 7 = dimanche
   const daysInMonth = data.days.length;
-  const rowsNeeded = Math.ceil(((firstWeekDay - 1) + daysInMonth) / cols);
+  const rowsNeeded = Math.ceil((firstWeekDay - 1 + daysInMonth) / cols);
   const rows = Math.max(4, Math.min(6, rowsNeeded));
 
   const cellH = (innerH - labelHeight - dayLabelHeight - gapY * (rows - 1)) / rows;
@@ -312,7 +434,7 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   }
 
   // Dessiner les anneaux pour chaque jour
-  const ringWidth = Math.max(4, Math.min(10, maxRadius * 0.20)); // trait plus fin
+  const ringWidth = Math.max(4, Math.min(10, maxRadius * 0.2)); // trait plus fin
   for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
     const dayIndex = dayNum - 1;
     const steps = data.days[dayIndex];

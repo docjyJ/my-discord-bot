@@ -1,44 +1,86 @@
 import {ActionRowBuilder, MessageFlags, ModalBuilder, type ModalSubmitInteraction, TextInputBuilder, TextInputStyle} from 'discord.js';
 import {objectif} from '../lang';
-import {getGoal, setGoal} from '../storage';
+import {getDailyGoal, getWeeklyGoal, setDailyGoal, setWeeklyGoal} from '../storage';
 
 export const modalId = 'objectif';
 
 async function getModal(userId: string) {
-  const current = await getGoal(userId);
+  const [currentDaily, currentWeekly] = await Promise.all([getDailyGoal(userId), getWeeklyGoal(userId)]);
   const modal = new ModalBuilder().setCustomId(modalId).setTitle(objectif.modal.title);
 
-  const input = new TextInputBuilder().setCustomId('pas').setLabel(objectif.modal.stepLabel).setPlaceholder(objectif.modal.stepPlaceholder).setStyle(TextInputStyle.Short).setRequired(false);
+  const dailyInput = new TextInputBuilder().setCustomId('pas_jour').setLabel(objectif.modal.stepLabel).setPlaceholder(objectif.modal.stepPlaceholder).setStyle(TextInputStyle.Short).setRequired(false);
 
-  if (current !== null) {
-    input.setValue(String(current));
+  if (currentDaily !== null) {
+    dailyInput.setValue(String(currentDaily));
   }
 
-  modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+  const weeklyInput = new TextInputBuilder()
+    .setCustomId('pas_semaine')
+    .setLabel(objectif.modal.weeklyStepLabel)
+    .setPlaceholder(objectif.modal.weeklyStepPlaceholder)
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false);
+
+  if (currentWeekly !== null) {
+    weeklyInput.setValue(String(currentWeekly));
+  }
+
+  modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(dailyInput), new ActionRowBuilder<TextInputBuilder>().addComponents(weeklyInput));
   return modal;
 }
 
 async function executor(interaction: ModalSubmitInteraction) {
-  const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
-  const stepsGoal = await getGoal(interaction.user.id);
+  const rawDailyStr = (interaction.fields.getTextInputValue('pas_jour') ?? '').trim();
+  const rawWeeklyStr = (interaction.fields.getTextInputValue('pas_semaine') ?? '').trim();
 
-  if (rawStr === '') {
-    if (stepsGoal === null) {
-      return interaction.reply({content: objectif.replyAction.noChange, flags: MessageFlags.Ephemeral});
+  const [currentDaily, currentWeekly] = await Promise.all([getDailyGoal(interaction.user.id), getWeeklyGoal(interaction.user.id)]);
+
+  let changed = false;
+  const messages: string[] = [];
+
+  // Daily
+  if (rawDailyStr === '') {
+    if (currentDaily !== null) {
+      await setDailyGoal(interaction.user.id, null);
+      changed = true;
+      messages.push(objectif.replyAction.noDailyGoal(interaction.user.id));
     }
-    await setGoal(interaction.user.id, null);
-    return interaction.reply({content: objectif.replyAction.noGoal(interaction.user.id)});
+  } else {
+    const raw = parseInt(rawDailyStr, 10);
+    if (Number.isNaN(raw) || raw < 0) {
+      return interaction.reply({content: objectif.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
+    }
+    if (raw !== currentDaily) {
+      await setDailyGoal(interaction.user.id, raw);
+      changed = true;
+      messages.push(objectif.replyAction.dailyGoal(interaction.user.id, raw));
+    }
   }
 
-  const raw = parseInt(rawStr, 10);
-  if (Number.isNaN(raw) || raw < 0) {
-    return interaction.reply({content: objectif.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
+  // Weekly
+  if (rawWeeklyStr === '') {
+    if (currentWeekly !== null) {
+      await setWeeklyGoal(interaction.user.id, null);
+      changed = true;
+      messages.push(objectif.replyAction.noWeeklyGoal(interaction.user.id));
+    }
+  } else {
+    const raw = parseInt(rawWeeklyStr, 10);
+    if (Number.isNaN(raw) || raw < 0) {
+      return interaction.reply({content: objectif.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
+    }
+    if (raw !== currentWeekly) {
+      await setWeeklyGoal(interaction.user.id, raw);
+      changed = true;
+      messages.push(objectif.replyAction.weeklyGoal(interaction.user.id, raw));
+    }
   }
-  if (stepsGoal === raw) {
+
+  if (!changed) {
     return interaction.reply({content: objectif.replyAction.noChange, flags: MessageFlags.Ephemeral});
   }
-  await setGoal(interaction.user.id, raw);
-  return interaction.reply({content: objectif.replyAction.goal(interaction.user.id, raw)});
+
+  return interaction.reply({content: messages.join('\n')});
 }
 
 export default {modalId, getModal, executor};
