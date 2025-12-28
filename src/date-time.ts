@@ -24,11 +24,11 @@ export default class DateTime {
   }
 
   weekDay() {
-    return this.date.getUTCDay() === 0 ? 7 : this.date.getUTCDay();
+    return this.date.getDay() === 0 ? 7 : this.date.getDay();
   }
 
   hour() {
-    return this.date.getUTCHours();
+    return this.date.getHours();
   }
 
   toDateString() {
@@ -81,6 +81,6 @@ export default class DateTime {
   }
 
   firstDayOfMonth() {
-    return new DateTime(new Date(this.date.getFullYear(), this.date.getMonth(), 1));
+    return new DateTime(new Date(this.date.getFullYear(), this.date.getMonth(), 1, this.date.getHours(), this.date.getMinutes(), this.date.getMilliseconds()));
   }
 }

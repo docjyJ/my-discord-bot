@@ -32,7 +32,7 @@ function presentationBuildOneRun(
     goal: number;
     streak: number;
   } | null,
-  weekly: { weeklyGoal: number; weeklyRemainingSteps: number; weeklyRemainingDays: number } | null
+  weekly: {weeklyGoal: number; weeklyRemainingSteps: number; weeklyRemainingDays: number} | null
 ) {
   return {
     name,
@@ -45,10 +45,10 @@ function presentationBuildOneRun(
         ...(weekly
           ? weekly
           : {
-            weeklyGoal: null,
-            weeklyRemainingSteps: null,
-            weeklyRemainingDays: null
-          })
+              weeklyGoal: null,
+              weeklyRemainingSteps: null,
+              weeklyRemainingDays: null
+            })
       })
   };
 }
@@ -63,7 +63,7 @@ function weeklySummaryBuildOneRun(
     bestStreak: number;
     countSuccesses: number;
   } | null,
-  weekly: { weeklyGoal: number } | null
+  weekly: {weeklyGoal: number} | null
 ) {
   return {
     name,
@@ -89,7 +89,7 @@ function monthlySummaryBuildOneRun(
     bestStreak: number;
     countSuccesses: number;
   } | null,
-  weekly: { weeklyGoal: number } | null
+  weekly: {weeklyGoal: number} | null
 ) {
   return {
     name,
@@ -105,36 +105,66 @@ function monthlySummaryBuildOneRun(
   };
 }
 
-function* presentationBuildGroup(prefix: string, date: DateTime, weekly: {
-  weeklyGoal: number;
-  weeklyRemainingSteps: number;
-  weeklyRemainingDays: number
-} | null) {
+function* presentationBuildGroup(
+  prefix: string,
+  date: DateTime,
+  weekly: {
+    weeklyGoal: number;
+    weeklyRemainingSteps: number;
+    weeklyRemainingDays: number;
+  } | null
+) {
   yield presentationBuildOneRun(`${prefix}-0-no.png`, date, 6000, null, weekly);
   yield presentationBuildOneRun(`${prefix}-1-fail.png`, date, 3000, {goal: 8000, streak: 6000}, weekly);
   yield presentationBuildOneRun(`${prefix}-2-succes.png`, date, 9000, {goal: 8000, streak: 5}, weekly);
 }
 
-function* weeklySummaryBuildGroup(prefix: string, date: DateTime, days: (number | null)[], countEntries: number, weekly: {
-  weeklyGoal: number
-} | null) {
+function* weeklySummaryBuildGroup(
+  prefix: string,
+  date: DateTime,
+  days: (number | null)[],
+  countEntries: number,
+  weekly: {
+    weeklyGoal: number;
+  } | null
+) {
   yield weeklySummaryBuildOneRun(`${prefix}-0-no.png`, date, days, countEntries, null, weekly);
-  yield weeklySummaryBuildOneRun(`${prefix}-1-yes.png`, date, days, countEntries, {
-    goal: 8000,
-    bestStreak: 13,
-    countSuccesses: 47
-  }, weekly);
+  yield weeklySummaryBuildOneRun(
+    `${prefix}-1-yes.png`,
+    date,
+    days,
+    countEntries,
+    {
+      goal: 8000,
+      bestStreak: 13,
+      countSuccesses: 47
+    },
+    weekly
+  );
 }
 
-function* monthlySummaryBuildGroup(prefix: string, date: DateTime, days: (number | null)[], countEntries: number, weekly: {
-  weeklyGoal: number
-} | null) {
+function* monthlySummaryBuildGroup(
+  prefix: string,
+  date: DateTime,
+  days: (number | null)[],
+  countEntries: number,
+  weekly: {
+    weeklyGoal: number;
+  } | null
+) {
   yield monthlySummaryBuildOneRun(`${prefix}-0-no.png`, date, days, countEntries, null, weekly);
-  yield monthlySummaryBuildOneRun(`${prefix}-1-yes.png`, date, days, countEntries, {
-    goal: 8000,
-    bestStreak: 13,
-    countSuccesses: 47
-  }, weekly);
+  yield monthlySummaryBuildOneRun(
+    `${prefix}-1-yes.png`,
+    date,
+    days,
+    countEntries,
+    {
+      goal: 8000,
+      bestStreak: 13,
+      countSuccesses: 47
+    },
+    weekly
+  );
 }
 
 function* presentationBuildAll(prefix: string) {
@@ -175,7 +205,12 @@ function* monthlySummaryBuildTests(prefix: string, date: DateTime, days: (number
 function* allBuilds() {
   yield* presentationBuildAll('presentation');
   yield* weeklySummaryBuildAll('weekly-summary', DATE_MONDAY, 53);
-  yield* monthlySummaryBuildTests('monthly-summary', DATE_MONTH, [12000, null, 7000, 13000, 8000, 14000, 3000, 6000, null, 9000, 2000, 11000, 8000, 20000, 7500, 12000, null, 4000, 3000, 10000, 9000, 8000, 7000, 6000], 53);
+  yield* monthlySummaryBuildTests(
+    'monthly-summary',
+    DATE_MONTH,
+    [12000, null, 7000, 13000, 8000, 14000, 3000, 6000, null, 9000, 2000, 11000, 8000, 20000, 7500, 12000, null, 4000, 3000, 10000, 9000, 8000, 7000, 6000],
+    53
+  );
 }
 
 async function main() {

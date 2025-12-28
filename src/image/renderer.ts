@@ -487,6 +487,7 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   const daysInMonth = data.days.length;
   const rowsNeeded = Math.ceil((firstWeekDay - 1 + daysInMonth) / cols);
   const rows = Math.max(4, Math.min(6, rowsNeeded));
+  console.log(firstDay, firstWeekDay);
 
   const cellH = (innerH - labelHeight - dayLabelHeight - gapY * (rows - 1)) / rows;
   const maxRadius = Math.min(cellW, cellH) / 2;
