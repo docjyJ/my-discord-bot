@@ -216,14 +216,15 @@ export type WeeklySummaryData = {
       bestStreak: null;
       countSuccesses: null;
     }
-) & (
-  | {
-      weeklyGoal: null;
-    }
-  | {
-      weeklyGoal: number;
-    }
-);
+) &
+  (
+    | {
+        weeklyGoal: null;
+      }
+    | {
+        weeklyGoal: number;
+      }
+  );
 
 export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
   const filledDays = data.days.filter((d): d is number => d !== null);

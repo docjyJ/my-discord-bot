@@ -7,10 +7,10 @@ import {lang, saisir as saisirLang} from './lang';
 import {getSaisirModal, modalsExecutor} from './modals';
 import {channelId, guildId, token} from './secrets';
 import {
+  getDailyGoal,
   getDataForMonthlySummary,
   getDataForWeeklySummary,
   getEntry,
-  getDailyGoal,
   getLastDailyPrompt,
   getLastMonthlySummary,
   getLastWeeklySummary,
