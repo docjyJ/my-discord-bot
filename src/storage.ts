@@ -55,7 +55,11 @@ export async function getDailyGoal(userId: string) {
 }
 
 export async function setDailyGoal(userId: string, dailyStepsGoal: number | null) {
-  await prisma.user.upsert({where: {userId}, update: {dailyStepsGoal}, create: {userId, dailyStepsGoal, weeklyStepsGoal: null}});
+  await prisma.user.upsert({
+    where: {userId},
+    update: {dailyStepsGoal},
+    create: {userId, dailyStepsGoal, weeklyStepsGoal: null}
+  });
 }
 
 export async function getWeeklyGoal(userId: string) {
@@ -64,7 +68,11 @@ export async function getWeeklyGoal(userId: string) {
 }
 
 export async function setWeeklyGoal(userId: string, weeklyStepsGoal: number | null) {
-  await prisma.user.upsert({where: {userId}, update: {weeklyStepsGoal}, create: {userId, dailyStepsGoal: null, weeklyStepsGoal}});
+  await prisma.user.upsert({
+    where: {userId},
+    update: {weeklyStepsGoal},
+    create: {userId, dailyStepsGoal: null, weeklyStepsGoal}
+  });
 }
 
 export async function getEntry(userId: string, date: DateTime) {
@@ -125,6 +133,44 @@ export async function getStreak(userId: string, end: DateTime) {
   return {streak, goal};
 }
 
+export type WeeklyProgress =
+  | {
+      weeklyGoal: null;
+      weeklyRemainingSteps: null;
+      weeklyRemainingDays: null;
+    }
+  | {
+      weeklyGoal: number;
+      weeklyRemainingSteps: number;
+      weeklyRemainingDays: number;
+    };
+
+export async function getWeeklyProgress(userId: string, date: DateTime): Promise<WeeklyProgress> {
+  const monday = date.addDay(1 - date.weekDay());
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    dates.push(monday.addDay(i).toDateString());
+  }
+
+  const u = await prisma.user.findUnique({
+    where: {userId},
+    select: {
+      weeklyStepsGoal: true,
+      entries: {where: {date: {in: dates}}}
+    }
+  });
+
+  if (u === null || u.weeklyStepsGoal === null || u.weeklyStepsGoal <= 0) {
+    return {weeklyGoal: null, weeklyRemainingSteps: null, weeklyRemainingDays: null};
+  }
+
+  return {
+    weeklyGoal: u.weeklyStepsGoal,
+    weeklyRemainingSteps: u.weeklyStepsGoal - u.entries.reduce((acc, e) => acc + (e.steps ?? 0), 0),
+    weeklyRemainingDays: 7 - date.weekDay()
+  };
+}
+
 export async function getDataForWeeklySummary(user: User, date: DateTime) {
   const userId = user.id;
   const dates: string[] = [];
@@ -132,16 +178,7 @@ export async function getDataForWeeklySummary(user: User, date: DateTime) {
     dates.push(date.addDay(i).toDateString());
   }
 
-  type WeeklyUserSelect = Prisma.UserGetPayload<{
-    select: {
-      dailyStepsGoal: true;
-      weeklyStepsGoal: true;
-      entries: {where: {date: {in: string[]}}};
-      _count: {select: {entries: {where: {steps: {not: null}}}}};
-    };
-  }>;
-
-  const u = (await prisma.user.findUnique({
+  const u = await prisma.user.findUnique({
     where: {userId},
     select: {
       dailyStepsGoal: true,
@@ -149,7 +186,7 @@ export async function getDataForWeeklySummary(user: User, date: DateTime) {
       entries: {where: {date: {in: dates}}},
       _count: {select: {entries: {where: {steps: {not: null}}}}}
     }
-  })) as WeeklyUserSelect | null;
+  });
 
   const filledEntries = u?.entries.filter(e => e.steps !== null) ?? [];
   const totalWeekSteps = filledEntries.reduce((acc, e) => acc + (e.steps as number), 0);

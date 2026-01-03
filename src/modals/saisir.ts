@@ -2,7 +2,7 @@ import {ActionRowBuilder, AttachmentBuilder, MessageFlags, ModalBuilder, type Mo
 import DateTime from '../date-time';
 import {renderPresentationImage} from '../image/renderer';
 import {saisir} from '../lang';
-import {getEntry, getStreak, setEntry} from '../storage';
+import {getEntry, getStreak, getWeeklyProgress, setEntry} from '../storage';
 
 const modalId = 'saisir';
 
@@ -25,16 +25,14 @@ async function getModal(date: DateTime, userId?: string) {
 
 async function buildAttachmentFor(interaction: ModalSubmitInteraction, date: DateTime, steps: number) {
   const streakGoal = await getStreak(interaction.user.id, date);
+  const weekly = await getWeeklyProgress(interaction.user.id, date);
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
   const img = await renderPresentationImage({
     avatarUrl,
     date,
     steps,
     ...streakGoal,
-    // pas d'info hebdo ici depuis getStreak -> fournir nulls
-    weeklyGoal: null,
-    weeklyRemainingSteps: null,
-    weeklyRemainingDays: null
+    ...weekly
   });
   return new AttachmentBuilder(img, {name: `progress-${interaction.user.id}-${date.toDateString()}.png`});
 }
