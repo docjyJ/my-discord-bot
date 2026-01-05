@@ -57,15 +57,16 @@ function startScheduler() {
     const now = DateTime.now();
     console.log(lang.scheduler.schedulerTick(now));
     try {
-      if (now.hour() >= 19) {
+      if (now.hour() === 0) {
+        const yesterday = now.addDay(-1);
         const lastPrompt = await getLastDailyPrompt();
-        if (!lastPrompt?.sameDay(now)) {
-          await sendDailyPrompts(now);
-          await setLastDailyPrompt(now);
+        if (!lastPrompt?.sameDay(yesterday)) {
+          await sendDailyPrompts(yesterday);
+          await setLastDailyPrompt(yesterday);
         }
       }
 
-      if (now.weekDay() === 1 && now.hour() >= 8) {
+      if (now.weekDay() === 1 && now.hour() === 12) {
         const mondayPrev = now.addDay(-7);
         const lastSummary = await getLastWeeklySummary();
         if (!lastSummary?.sameDay(mondayPrev)) {
@@ -75,7 +76,7 @@ function startScheduler() {
       }
 
       // Résumé mensuel : le premier jour du mois à 09h (UTC) -> envoyer le mois précédent
-      if (now.day() === 1 && now.hour() >= 9) {
+      if (now.day() === 1 && now.hour() === 13) {
         const firstDayPrevMonth = now.addDay(-1).firstDayOfMonth();
         const lastMonthly = await getLastMonthlySummary();
         if (!lastMonthly?.sameDay(firstDayPrevMonth)) {
@@ -89,7 +90,7 @@ function startScheduler() {
       console.log(lang.scheduler.schedulerEndTick);
       schedulerRunning = false;
     }
-  }, 60 * 1000);
+  }, 60 * 1000 * 5);
 }
 
 async function sendDailyPrompts(now: DateTime) {
@@ -108,7 +109,7 @@ async function sendDailyPrompts(now: DateTime) {
   if (!channelFetched || !channelFetched.isTextBased()) return;
   const textChannel = channelFetched as TextChannel;
   await textChannel.send({
-    content: notFilled.length > 1 ? lang.scheduler.dailyPromptMessage(now.toTimeString(), notFilled, now) : lang.scheduler.dailyPromptMessageSingle(now.toTimeString(), notFilled[0], now),
+    content: notFilled.length > 1 ? lang.scheduler.dailyPromptMessage(notFilled, now) : lang.scheduler.dailyPromptMessageSingle(notFilled[0], now),
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId(`${saisirLang.ids.buttonPrefix}${now.toDateString()}`).setLabel(saisirLang.button.label).setStyle(ButtonStyle.Primary)

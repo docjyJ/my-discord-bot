@@ -10,10 +10,10 @@ export const lang = {
     schedulerError: 'Scheduler error',
     sendingRemindersFor: (date: DateTime) => `Envoi des rappels pour le ${date.fullLocalDate(fr)}`,
     reminderChannel: 'Canal de rappel:',
-    dailyPromptMessage: (time: string, userIds: string[], date: DateTime) =>
-      `Il est ${time}. <@${userIds.join('> <@')}>, vous n'avez pas encore saisi vos pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
-    dailyPromptMessageSingle: (time: string, userId: string, date: DateTime) =>
-      `Il est ${time}. <@${userId}>, tu n'as pas encore saisi tes pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
+    dailyPromptMessage: (userIds: string[], date: DateTime) =>
+      `La journée est finie ! <@${userIds.join('> <@')}>, vous n'avez pas encore saisi vos pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
+    dailyPromptMessageSingle: (userId: string, date: DateTime) =>
+      `La journée est finie ! <@${userId}>, tu n'as pas encore saisi tes pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
     weeklySummarySendError: "Impossible d'envoyer le résumé pour",
     connected: 'Connecté',
     weeklySummaryMessage: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`,
