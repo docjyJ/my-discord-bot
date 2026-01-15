@@ -28,7 +28,7 @@
     "@biomejs/biome": "^2.3.1",
     "@types/node": "^20.19.14",
     "tsup": "^8.5.0",
-    "tsx": "^4.20.5",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2"
   },
   "private": true
