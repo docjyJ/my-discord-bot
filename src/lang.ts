@@ -21,7 +21,12 @@ export const lang = {
       const label = capitalizeFirst(firstDay.monthLocalName(fr));
       return `<@${userId}>, voici ton résumé pour le mois de ${label}.`;
     },
-    monthlySummarySendError: "Impossible d'envoyer le résumé mensuel pour"
+    monthlySummarySendError: "Impossible d'envoyer le résumé mensuel pour",
+    weeklySummaryTriggered: (date: DateTime) => `Résumé hebdomadaire déclenché pour la semaine du ${date.fullLocalDate(fr)}.`,
+    monthlySummaryTriggered: (date: DateTime) => {
+      const label = capitalizeFirst(date.monthLocalName(fr));
+      return `Résumé mensuel déclenché pour le mois de ${label}.`;
+    }
   },
   deploy: {
     start: 'Synchronisation complète des commandes (/)...',
@@ -82,7 +87,10 @@ export const saisir = {
     entryDeleted: (userId: string, date: DateTime) => `<@${userId}> a supprimé sa saisie pour le ${date.fullLocalDate(fr)}.`,
     noChange: (date: DateTime) => `Tu n'a pas changé ta saisie pour le ${date.fullLocalDate(fr)}.`,
     invalidValue: 'Valeur invalide: entrer un entier >= 0.',
-    saved: (userId: string, date: DateTime) => `<@${userId}> a enregistré ses pas pour le ${date.fullLocalDate(fr)}.`
+    saved: (userId: string, date: DateTime) => `<@${userId}> a enregistré ses pas pour le ${date.fullLocalDate(fr)}.`,
+    summaryWeek: 'De plus voici son résumé de la semaine.',
+    summaryMonth: 'De plus voici son résumé du mois.',
+    summaryWeekMonth: 'De plus voici son résumé de la semaine et du mois.'
   },
   image: {
     dateTitle: (date: DateTime) => date.fullLocalDate(fr),

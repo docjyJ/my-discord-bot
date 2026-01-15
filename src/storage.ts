@@ -5,9 +5,7 @@ import type {MonthlySummaryData, WeeklySummaryData} from './image/renderer';
 
 const prisma = new PrismaClient();
 
-const WEEKLY_SUMMARY_KEY = 'lastWeeklySummaryMonday';
 const DAILY_PROMPT_KEY = 'lastDailyPrompt';
-const MONTHLY_SUMMARY_KEY = 'lastMonthlySummaryFirstDay';
 
 async function getMeta(key: string) {
   const meta = await prisma.meta.findUnique({where: {key}, select: {value: true}});
@@ -22,15 +20,6 @@ async function setMeta(key: string, value: string) {
   });
 }
 
-export async function getLastWeeklySummary() {
-  const value = await getMeta(WEEKLY_SUMMARY_KEY);
-  return value ? DateTime.parse(value) : null;
-}
-
-export function setLastWeeklySummary(date: DateTime) {
-  return setMeta(WEEKLY_SUMMARY_KEY, date.toDateString());
-}
-
 export async function getLastDailyPrompt() {
   const value = await getMeta(DAILY_PROMPT_KEY);
   return value ? DateTime.parse(value) : null;
@@ -38,15 +27,6 @@ export async function getLastDailyPrompt() {
 
 export function setLastDailyPrompt(date: DateTime) {
   return setMeta(DAILY_PROMPT_KEY, date.toDateString());
-}
-
-export async function getLastMonthlySummary() {
-  const value = await getMeta(MONTHLY_SUMMARY_KEY);
-  return value ? DateTime.parse(value) : null;
-}
-
-export function setLastMonthlySummary(date: DateTime) {
-  return setMeta(MONTHLY_SUMMARY_KEY, date.toDateString());
 }
 
 export async function getDailyGoal(userId: string) {
@@ -313,4 +293,41 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
   }
 
   return base;
+}
+
+export async function isWeekComplete(userId: string, date: DateTime) {
+  const monday = date.addDay(1 - date.weekDay());
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    dates.push(monday.addDay(i).toDateString());
+  }
+
+  const entries = await prisma.dailyEntry.findMany({
+    where: {userId, date: {in: dates}},
+    select: {date: true, steps: true}
+  });
+  const byDate = new Map(entries.map(e => [e.date, e.steps]));
+  return dates.every(d => {
+    const val = byDate.get(d);
+    return val !== undefined && val !== null;
+  });
+}
+
+export async function isMonthComplete(userId: string, date: DateTime) {
+  const firstDay = date.firstDayOfMonth();
+  const daysInMonth = firstDay.daysInMonth();
+  const dates: string[] = [];
+  for (let i = 0; i < daysInMonth; i++) {
+    dates.push(firstDay.addDay(i).toDateString());
+  }
+
+  const entries = await prisma.dailyEntry.findMany({
+    where: {userId, date: {in: dates}},
+    select: {date: true, steps: true}
+  });
+  const byDate = new Map(entries.map(e => [e.date, e.steps]));
+  return dates.every(d => {
+    const val = byDate.get(d);
+    return val !== undefined && val !== null;
+  });
 }

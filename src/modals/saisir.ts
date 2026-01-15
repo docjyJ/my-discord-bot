@@ -2,6 +2,7 @@ import {ActionRowBuilder, AttachmentBuilder, MessageFlags, ModalBuilder, type Mo
 import DateTime from '../date-time';
 import {renderPresentationImage} from '../image/renderer';
 import {saisir} from '../lang';
+import {maybeSendSummariesAfterEntry} from '../services/summaries';
 import {getEntry, getStreak, getWeeklyProgress, setEntry} from '../storage';
 
 const modalId = 'saisir';
@@ -64,10 +65,16 @@ async function executor(interaction: ModalSubmitInteraction, [dateISO]: string[]
   }
 
   await setEntry(interaction.user.id, date, raw);
+  const {attachments: summaryAttachments, hasWeek, hasMonth} = await maybeSendSummariesAfterEntry(interaction.user.id, date);
+
+  let extraSummaryText = '';
+  if (hasWeek && hasMonth) extraSummaryText = saisir.replyAction.summaryWeekMonth;
+  else if (hasWeek) extraSummaryText = saisir.replyAction.summaryWeek;
+  else if (hasMonth) extraSummaryText = saisir.replyAction.summaryMonth;
 
   return interaction.reply({
-    content: saisir.replyAction.saved(interaction.user.id, date),
-    files: [await buildAttachmentFor(interaction, date, raw)]
+    content: `${saisir.replyAction.saved(interaction.user.id, date)}${extraSummaryText ? `\n${extraSummaryText}` : ''}`,
+    files: [await buildAttachmentFor(interaction, date, raw), ...summaryAttachments]
   });
 }
 
