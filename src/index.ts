@@ -51,46 +51,49 @@ client.on(Events.InteractionCreate, async interaction => {
 let schedulerRunning = false;
 
 function startScheduler() {
-  setInterval(async () => {
-    if (schedulerRunning) return; // éviter les overlaps
-    schedulerRunning = true;
-    const now = DateTime.now();
-    console.log(lang.scheduler.schedulerTick(now));
-    try {
-      if (now.hour() === 0) {
-        const yesterday = now.addDay(-1);
-        const lastPrompt = await getLastDailyPrompt();
-        if (!lastPrompt?.sameDay(yesterday)) {
-          await sendDailyPrompts(yesterday);
-          await setLastDailyPrompt(yesterday);
+  setInterval(
+    async () => {
+      if (schedulerRunning) return; // éviter les overlaps
+      schedulerRunning = true;
+      const now = DateTime.now();
+      console.log(lang.scheduler.schedulerTick(now));
+      try {
+        if (now.hour() === 0) {
+          const yesterday = now.addDay(-1);
+          const lastPrompt = await getLastDailyPrompt();
+          if (!lastPrompt?.sameDay(yesterday)) {
+            await sendDailyPrompts(yesterday);
+            await setLastDailyPrompt(yesterday);
+          }
         }
-      }
 
-      if (now.weekDay() === 1 && now.hour() === 12) {
-        const mondayPrev = now.addDay(-7);
-        const lastSummary = await getLastWeeklySummary();
-        if (!lastSummary?.sameDay(mondayPrev)) {
-          await sendWeeklySummaries(mondayPrev);
-          await setLastWeeklySummary(mondayPrev);
+        if (now.weekDay() === 1 && now.hour() === 12) {
+          const mondayPrev = now.addDay(-7);
+          const lastSummary = await getLastWeeklySummary();
+          if (!lastSummary?.sameDay(mondayPrev)) {
+            await sendWeeklySummaries(mondayPrev);
+            await setLastWeeklySummary(mondayPrev);
+          }
         }
-      }
 
-      // Résumé mensuel : le premier jour du mois à 09h (UTC) -> envoyer le mois précédent
-      if (now.day() === 1 && now.hour() === 13) {
-        const firstDayPrevMonth = now.addDay(-1).firstDayOfMonth();
-        const lastMonthly = await getLastMonthlySummary();
-        if (!lastMonthly?.sameDay(firstDayPrevMonth)) {
-          await sendMonthlySummaries(firstDayPrevMonth);
-          await setLastMonthlySummary(firstDayPrevMonth);
+        // Résumé mensuel : le premier jour du mois à 09h (UTC) -> envoyer le mois précédent
+        if (now.day() === 1 && now.hour() === 13) {
+          const firstDayPrevMonth = now.addDay(-1).firstDayOfMonth();
+          const lastMonthly = await getLastMonthlySummary();
+          if (!lastMonthly?.sameDay(firstDayPrevMonth)) {
+            await sendMonthlySummaries(firstDayPrevMonth);
+            await setLastMonthlySummary(firstDayPrevMonth);
+          }
         }
+      } catch (e) {
+        console.error(lang.scheduler.schedulerError, e);
+      } finally {
+        console.log(lang.scheduler.schedulerEndTick);
+        schedulerRunning = false;
       }
-    } catch (e) {
-      console.error(lang.scheduler.schedulerError, e);
-    } finally {
-      console.log(lang.scheduler.schedulerEndTick);
-      schedulerRunning = false;
-    }
-  }, 60 * 1000 * 5);
+    },
+    60 * 1000 * 5
+  );
 }
 
 async function sendDailyPrompts(now: DateTime) {

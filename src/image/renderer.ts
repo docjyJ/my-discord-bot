@@ -29,91 +29,9 @@ export type PresentationOptions = {
       }
   );
 
-function computeWeeklyMessage(opts: PresentationOptions): {message: string | null; weeklySucceeded: boolean} {
-  // Cas sans objectif hebdo : aucun message
-  if (opts.weeklyGoal === null) {
-    return {message: null, weeklySucceeded: false};
-  }
-
-  const weeklyGoal = opts.weeklyGoal;
-  const remainingSteps = Math.max(0, opts.weeklyRemainingSteps);
-  const remainingDays = Math.max(0, opts.weeklyRemainingDays);
-
-  if (weeklyGoal <= 0) {
-    return {message: null, weeklySucceeded: false};
-  }
-
-  const weeklySucceeded = remainingSteps <= 0;
-
-  const hasDailyGoal = opts.goal !== null && opts.goal > 0;
-  const dailySucceeded = hasDailyGoal && opts.steps >= (opts.goal as number);
-
-  let perDay: number | null = null;
-  if (!weeklySucceeded && remainingDays > 0) {
-    perDay = Math.ceil(remainingSteps / remainingDays);
-  } else if (!weeklySucceeded && remainingDays === 0) {
-    perDay = 0;
-  }
-
-  if (!weeklySucceeded && remainingSteps === 0) {
-    // sécurité: si on nous donne 0 restant mais weeklySucceeded attendu faux
-    return {message: null, weeklySucceeded};
-  }
-
-  // Implémentation de la matrice de messages
-  //  - lignes: état objectif journalier (pas d’objectif / incomplet / réussi)
-  //  - colonnes: état objectif hebdo (pas d’objectif / incomplet / réussi)
-
-  if (weeklySucceeded) {
-    // Colonne "Obj réusi"
-    if (dailySucceeded) {
-      // case 7
-      return {message: saisir.image.weekly.message7, weeklySucceeded};
-    }
-    // case 3
-    return {message: saisir.image.weekly.message3, weeklySucceeded};
-  }
-
-  // Hebdo incomplet
-  if (remainingDays > 1) {
-    // Colonne "Obj incomplet reste plusieurs jours" => messages 1 ou 6
-    if (!hasDailyGoal || !dailySucceeded) {
-      // Ligne "Pas Obj" ou "Obj incomplet": case 1
-      if (perDay !== null) {
-        return {message: saisir.image.weekly.message1(remainingSteps, perDay), weeklySucceeded};
-      }
-      return {message: null, weeklySucceeded};
-    }
-    // Ligne "Obj réusi": case 6
-    if (perDay !== null) {
-      return {message: saisir.image.weekly.message6(remainingSteps, perDay), weeklySucceeded};
-    }
-    return {message: saisir.image.weekly.message5(remainingSteps), weeklySucceeded};
-  }
-
-  if (remainingDays === 1) {
-    // Colonne "Obj incomplet reste 1 jour" => messages 2 ou 5
-    if (!hasDailyGoal || !dailySucceeded) {
-      // Ligne "Pas Obj" ou "Obj incomplet": case 2
-      return {message: saisir.image.weekly.message2(remainingSteps), weeklySucceeded};
-    }
-    // Ligne "Obj réusi": case 5
-    return {message: saisir.image.weekly.message5(remainingSteps), weeklySucceeded};
-  }
-
-  // remainingDays === 0 et hebdo non réussi
-  // Colonne "Obj incomplet reste 0 jour" => 0 en haut, 4 sur dernière ligne
-  if (dailySucceeded) {
-    // case 4
-    return {message: saisir.image.weekly.message4, weeklySucceeded};
-  }
-
-  // case 0
-  return {message: null, weeklySucceeded};
-}
-
 export async function renderPresentationImage(opts: PresentationOptions) {
   console.log('Rendering presentation image with options:', opts);
+  const numberFmt = new Intl.NumberFormat('fr-FR');
   const goal = opts.goal === null || opts.goal < 0 ? 0 : opts.goal;
   const steps = opts.steps < 0 ? 0 : opts.steps;
   const streak = opts.streak === null || opts.streak < 0 ? 0 : opts.streak;
@@ -141,16 +59,14 @@ export async function renderPresentationImage(opts: PresentationOptions) {
   const widget_radius = radius - padding - arcWidth / 2;
 
   const progress = goal !== 0 && steps !== 0 ? (goal > steps ? (steps / goal) * 0.98 : 1) : 0;
-  draw.drawCircle(right_x, h_center, widget_radius, arcWidth, '#374151');
 
-  const {message: weeklyMessage, weeklySucceeded} = computeWeeklyMessage(opts);
+  const weeklySucceeded = opts.weeklyGoal !== null && opts.weeklyGoal > 0 && opts.weeklyRemainingSteps <= 0;
 
   // If there is no daily goal but there is a weekly goal, draw a yellow ring to indicate weekly tracking
   const hasDailyGoal = opts.goal !== null && opts.goal > 0;
   const dailySucceeded = hasDailyGoal && steps >= (opts.goal as number);
-  if (!hasDailyGoal && weeklySucceeded) {
-    const grad = draw.createLinearGradient(right_x - widget_radius, h_center, right_x + widget_radius, h_center, '#eab308', '#f1dd89');
-    draw.drawCircle(right_x, h_center, widget_radius, arcWidth, grad);
+  if (hasDailyGoal) {
+    draw.drawCircle(right_x, h_center, widget_radius, arcWidth, '#374151');
   }
 
   if (progress === 1) {
@@ -171,10 +87,10 @@ export async function renderPresentationImage(opts: PresentationOptions) {
     mainY = h_center - 45 + (80 - 34) / 2;
   }
 
-  draw.text(`${steps}`, right_x, mainY, '#e5e7eb', 80);
+  draw.text(`${numberFmt.format(steps)}`, right_x, mainY, '#e5e7eb', 80);
 
   if (goal !== 0) {
-    draw.text(`/ ${goal}`, right_x, h_center + 45, '#94a3b8', 34);
+    draw.text(`/ ${numberFmt.format(goal)}`, right_x, h_center + 45, '#94a3b8', 34);
   }
 
   if (progress === 1 && streak !== 0) {
@@ -185,16 +101,55 @@ export async function renderPresentationImage(opts: PresentationOptions) {
     draw.text(saisir.image.streak(streak), badgeX, badgeY, '#0b1120', 24);
   }
 
-  // Texte de bas de carte : uniquement la matrice hebdomadaire
-  // If no weekly message but daily succeeded and there's no weekly goal, show the daily success message
-  let bottomMessage: string | null = weeklyMessage;
-  if (!bottomMessage && opts.weeklyGoal === null && dailySucceeded) {
-    bottomMessage = saisir.image.weekly.message4;
-  }
+  // Barre hebdomadaire plein format en bas de carte
+  const weeklyGoalValid = opts.weeklyGoal !== null && opts.weeklyGoal > 0;
+  if (weeklyGoalValid) {
+    const weeklyRemaining = Math.max(0, opts.weeklyRemainingSteps);
+    const weeklyGoal = opts.weeklyGoal as number;
+    const weeklyDone = Math.min(weeklyGoal, Math.max(0, weeklyGoal - weeklyRemaining));
+    const ratio = weeklyGoal === 0 ? 0 : Math.min(1, weeklyDone / weeklyGoal);
+    const remainingDays = Math.max(0, opts.weeklyRemainingDays);
+    const perDay = remainingDays > 0 ? Math.ceil(weeklyRemaining / remainingDays) : weeklyRemaining;
 
-  if (bottomMessage) {
-    const color = '#e5e7eb';
-    draw.text(bottomMessage, width / 2, height - 60, color, 30);
+    const barPadding = 12;
+    const barHeight = arcWidth + padding * 2;
+    const barRadius = barHeight / 2;
+    const barWidth = width - barPadding * 2;
+    const barY = height - barPadding - barHeight;
+
+    const barBg = draw.createLinearGradient(barPadding, barY, barPadding, barY + barHeight, '#0b1220', '#0f172a');
+    draw.roundedRectFill(barPadding, barY, barWidth, barHeight, barRadius, barBg);
+    draw.roundedRectFill(barPadding + padding, barY + padding, barWidth - padding * 2, barHeight - padding * 2, barRadius, '#374151');
+
+    let topColor: string;
+    let bottomColor: string;
+    if (weeklySucceeded && dailySucceeded) {
+      topColor = '#eab308';
+      bottomColor = '#f1dd89';
+    } else if (weeklySucceeded) {
+      topColor = '#22c55e';
+      bottomColor = '#84cc16';
+    } else {
+      topColor = '#60a5fa';
+      bottomColor = '#c084fc';
+    }
+
+    const fillWidth = arcWidth + Math.round((barWidth - padding * 2 - arcWidth) * ratio);
+    if (fillWidth > 0) {
+      const g = draw.createLinearGradient(barPadding, barY, barPadding + barWidth, barY, topColor, bottomColor);
+      draw.roundedRectFill(barPadding + padding, barY + padding, fillWidth, barHeight - padding * 2, barRadius, g);
+    }
+
+    const labelParts: string[] = [];
+    labelParts.push(`${numberFmt.format(weeklyDone)} / ${numberFmt.format(weeklyGoal)}`);
+    if (!weeklySucceeded && remainingDays > 1) {
+      labelParts.push(`Reste : ${numberFmt.format(perDay)} / jour`);
+    }
+    if (!weeklySucceeded && remainingDays === 1) {
+      labelParts.push(`Reste : ${numberFmt.format(perDay)}`);
+    }
+    const label = labelParts.join('  ');
+    draw.text(label, width / 2, barY - 16, '#e5e7eb', 22);
   }
 
   return draw.toBuffer();
