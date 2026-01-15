@@ -15,7 +15,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const dateOpt = interaction.options.getString('lundi');
   const date = dateOpt ? DateTime.parse(dateOpt) : DateTime.now();
   if (date === null) return interaction.reply({content: resumeLang.replyAction.invalidMonday, flags: MessageFlags.Ephemeral});
-  const monday = date.addDay(1 - date.weekDay());
+  const monday = date.getMonday();
 
   const img = await renderWeeklySummaryImage(await getDataForWeeklySummary(interaction.user, monday));
 

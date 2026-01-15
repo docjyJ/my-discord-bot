@@ -18,7 +18,7 @@ export async function maybeSendSummariesAfterEntry(
   let hasWeek = false;
   let hasMonth = false;
   const user = await client.users.fetch(userId);
-  const monday = date.addDay(1 - date.weekDay());
+  const monday = date.getMonday();
   const firstDayMonth = date.firstDayOfMonth();
 
   const weekComplete = await isWeekComplete(userId, date);

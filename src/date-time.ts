@@ -27,6 +27,10 @@ export default class DateTime {
     return this.date.getDay() === 0 ? 7 : this.date.getDay();
   }
 
+  getMonday() {
+    return this.addDay(1 - this.weekDay());
+  }
+
   hour() {
     return this.date.getHours();
   }

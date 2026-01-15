@@ -126,7 +126,7 @@ export type WeeklyProgress =
     };
 
 export async function getWeeklyProgress(userId: string, date: DateTime): Promise<WeeklyProgress> {
-  const monday = date.addDay(1 - date.weekDay());
+  const monday = date.getMonday();
   const dates: string[] = [];
   for (let i = 0; i < 7; i++) {
     dates.push(monday.addDay(i).toDateString());
@@ -296,7 +296,7 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
 }
 
 export async function isWeekComplete(userId: string, date: DateTime) {
-  const monday = date.addDay(1 - date.weekDay());
+  const monday = date.getMonday();
   const dates: string[] = [];
   for (let i = 0; i < 7; i++) {
     dates.push(monday.addDay(i).toDateString());
