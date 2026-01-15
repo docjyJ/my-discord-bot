@@ -18,7 +18,7 @@
     "generate:data": "tsx src/scripts/generate-random-data.ts"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.80",
+    "@napi-rs/canvas": "^0.1.82",
     "@prisma/client": "^6.16.2",
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.2",
