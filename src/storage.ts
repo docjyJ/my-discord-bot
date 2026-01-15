@@ -116,12 +116,12 @@ export async function getStreak(userId: string, end: DateTime) {
 export type WeeklyProgress =
   | {
       weeklyGoal: null;
-      weeklyRemainingSteps: null;
+      weeklySteps: null;
       weeklyRemainingDays: null;
     }
   | {
       weeklyGoal: number;
-      weeklyRemainingSteps: number;
+      weeklySteps: number;
       weeklyRemainingDays: number;
     };
 
@@ -141,12 +141,14 @@ export async function getWeeklyProgress(userId: string, date: DateTime): Promise
   });
 
   if (u === null || u.weeklyStepsGoal === null || u.weeklyStepsGoal <= 0) {
-    return {weeklyGoal: null, weeklyRemainingSteps: null, weeklyRemainingDays: null};
+    return {weeklyGoal: null, weeklySteps: null, weeklyRemainingDays: null};
   }
+
+  const totalWeekSteps = u.entries.reduce((acc, e) => acc + (e.steps ?? 0), 0);
 
   return {
     weeklyGoal: u.weeklyStepsGoal,
-    weeklyRemainingSteps: u.weeklyStepsGoal - u.entries.reduce((acc, e) => acc + (e.steps ?? 0), 0),
+    weeklySteps: totalWeekSteps,
     weeklyRemainingDays: 7 - date.weekDay()
   };
 }

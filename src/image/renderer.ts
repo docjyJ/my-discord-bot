@@ -19,12 +19,12 @@ export type PresentationOptions = {
   (
     | {
         weeklyGoal: null;
-        weeklyRemainingSteps: null;
+        weeklySteps: null;
         weeklyRemainingDays: null;
       }
     | {
         weeklyGoal: number;
-        weeklyRemainingSteps: number;
+        weeklySteps: number;
         weeklyRemainingDays: number;
       }
   );
@@ -60,7 +60,7 @@ export async function renderPresentationImage(opts: PresentationOptions) {
 
   const progress = goal !== 0 && steps !== 0 ? (goal > steps ? (steps / goal) * 0.98 : 1) : 0;
 
-  const weeklySucceeded = opts.weeklyGoal !== null && opts.weeklyGoal > 0 && opts.weeklyRemainingSteps <= 0;
+  const weeklySucceeded = opts.weeklyGoal !== null && opts.weeklySteps >= opts.weeklyGoal;
 
   // If there is no daily goal but there is a weekly goal, draw a yellow ring to indicate weekly tracking
   const hasDailyGoal = opts.goal !== null && opts.goal > 0;
@@ -104,10 +104,10 @@ export async function renderPresentationImage(opts: PresentationOptions) {
   // Barre hebdomadaire plein format en bas de carte
   const weeklyGoalValid = opts.weeklyGoal !== null && opts.weeklyGoal > 0;
   if (weeklyGoalValid) {
-    const weeklyRemaining = Math.max(0, opts.weeklyRemainingSteps);
-    const weeklyGoal = opts.weeklyGoal as number;
-    const weeklyDone = Math.min(weeklyGoal, Math.max(0, weeklyGoal - weeklyRemaining));
-    const ratio = weeklyGoal === 0 ? 0 : Math.min(1, weeklyDone / weeklyGoal);
+    const weeklyGoal = opts.weeklyGoal;
+    const weeklySteps = opts.weeklySteps;
+    const weeklyRemaining = Math.max(0, weeklyGoal - weeklySteps);
+    const ratio = weeklyGoal === 0 ? 0 : Math.min(1, weeklySteps / weeklyGoal);
     const remainingDays = Math.max(0, opts.weeklyRemainingDays);
     const perDay = remainingDays > 0 ? Math.ceil(weeklyRemaining / remainingDays) : weeklyRemaining;
 
@@ -141,7 +141,7 @@ export async function renderPresentationImage(opts: PresentationOptions) {
     }
 
     const labelParts: string[] = [];
-    labelParts.push(`${numberFmt.format(weeklyDone)} / ${numberFmt.format(weeklyGoal)}`);
+    labelParts.push(`${numberFmt.format(weeklySteps)} / ${numberFmt.format(weeklyGoal)}`);
     if (!weeklySucceeded && remainingDays > 1) {
       labelParts.push(`Reste : ${numberFmt.format(perDay)} / jour`);
     }

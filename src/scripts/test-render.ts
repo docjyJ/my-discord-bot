@@ -32,7 +32,7 @@ function presentationBuildOneRun(
     goal: number;
     streak: number;
   } | null,
-  weekly: {weeklyGoal: number; weeklyRemainingSteps: number; weeklyRemainingDays: number} | null
+  weekly: {weeklyGoal: number; weeklySteps: number; weeklyRemainingDays: number} | null
 ) {
   return {
     name,
@@ -46,7 +46,7 @@ function presentationBuildOneRun(
           ? weekly
           : {
               weeklyGoal: null,
-              weeklyRemainingSteps: null,
+              weeklySteps: null,
               weeklyRemainingDays: null
             })
       })
@@ -110,7 +110,7 @@ function* presentationBuildGroup(
   date: DateTime,
   weekly: {
     weeklyGoal: number;
-    weeklyRemainingSteps: number;
+    weeklySteps: number;
     weeklyRemainingDays: number;
   } | null
 ) {
@@ -170,23 +170,23 @@ function* monthlySummaryBuildGroup(
 function* presentationBuildAll(prefix: string) {
   yield* presentationBuildGroup(`${prefix}-0-no`, DATE_FRIDAY, null);
   yield* presentationBuildGroup(`${prefix}-1-progress`, DATE_FRIDAY, {
-    weeklyGoal: 20000,
-    weeklyRemainingSteps: 12000,
+    weeklyGoal: 40000,
+    weeklySteps: 28000,
     weeklyRemainingDays: 2
   });
   yield* presentationBuildGroup(`${prefix}-2-last`, DATE_SATURDAY, {
     weeklyGoal: 40000,
-    weeklyRemainingSteps: 6000,
+    weeklySteps: 34000,
     weeklyRemainingDays: 1
   });
   yield* presentationBuildGroup(`${prefix}-3-fail`, DATE_SUNDAY, {
     weeklyGoal: 40000,
-    weeklyRemainingSteps: 3000,
+    weeklySteps: 37000,
     weeklyRemainingDays: 0
   });
   yield* presentationBuildGroup(`${prefix}-4-success`, DATE_FRIDAY, {
     weeklyGoal: 40000,
-    weeklyRemainingSteps: 0,
+    weeklySteps: 50000,
     weeklyRemainingDays: 2
   });
 }
