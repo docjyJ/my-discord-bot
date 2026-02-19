@@ -1,6 +1,6 @@
 import {ActionRowBuilder, AttachmentBuilder, MessageFlags, ModalBuilder, type ModalSubmitInteraction, TextInputBuilder, TextInputStyle} from 'discord.js';
 import DateTime from '../date-time';
-import {renderPresentationImage} from '../image/presentation';
+import {renderDailySummaryImage} from '../image/daily-summary';
 import {saisir} from '../lang';
 import {maybeSendSummariesAfterEntry} from '../services/summaries';
 import {db, getStreak, getWeeklyProgress} from '../storage';
@@ -28,7 +28,7 @@ async function buildAttachmentFor(interaction: ModalSubmitInteraction, date: Dat
   const streakGoal = await getStreak(interaction.user.id, date);
   const weekly = await getWeeklyProgress(interaction.user.id, date);
   const avatarUrl = interaction.user.displayAvatarURL({extension: 'png', size: 512});
-  const img = await renderPresentationImage({
+  const img = await renderDailySummaryImage({
     avatarUrl,
     date,
     steps,

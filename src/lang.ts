@@ -96,6 +96,11 @@ export const saisir = {
   image: {
     dateTitle: (date: DateTime) => date.fullLocalDate(fr),
     streak: (days: number) => (days === 1 ? '1 jour' : `${nbFmt.format(days)} jours`),
+    stepsLabel: (steps: number) => nbFmt.format(steps),
+    goalLabel: (goal: number) => `/ ${nbFmt.format(goal)}`,
+    weeklyProgress: (steps: number, goal: number) => `${nbFmt.format(steps)} / ${nbFmt.format(goal)}`,
+    weeklyRemainingPerDay: (perDay: number) => ` - Reste : ${nbFmt.format(perDay)} par jour`,
+    weeklyRemainingLast: (perDay: number) => ` - Reste : ${nbFmt.format(perDay)}`,
     reached: 'Félicitations, tu as atteint ton objectif.',
     weeklyGoalSuccess: 'Félicitation tu as atteint ton objectif hebdomadaire',
     dailyGoalSuccess: 'Félicitation tu as réussi ton objectif journalier',
