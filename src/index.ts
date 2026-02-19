@@ -6,7 +6,7 @@ import {deployCommands} from './deploy-commands';
 import {lang, saisir as saisirLang} from './lang';
 import {getSaisirModal, modalsExecutor} from './modals';
 import {channelId, guildId, token} from './secrets';
-import {getDailyGoal, getEntry, getLastDailyPrompt, listUsers, setLastDailyPrompt} from './storage';
+import {db} from './storage';
 
 client.once(Events.ClientReady, async () => {
   console.log(lang.scheduler.ready);
@@ -44,10 +44,10 @@ function startScheduler() {
       try {
         if (now.hour() === 0) {
           const yesterday = now.addDay(-1);
-          const lastPrompt = await getLastDailyPrompt();
+          const lastPrompt = await db.getLastDailyPrompt();
           if (!lastPrompt?.sameDay(yesterday)) {
             await sendDailyPrompts(yesterday);
-            await setLastDailyPrompt(yesterday);
+            await db.setLastDailyPrompt(yesterday);
           }
         }
       } catch (e) {
@@ -63,12 +63,12 @@ function startScheduler() {
 
 async function sendDailyPrompts(now: DateTime) {
   console.log(lang.scheduler.sendingRemindersFor(now));
-  const users = await listUsers();
+  const users = await db.listUsers();
   const notFilled: string[] = [];
   for (const userId of users) {
-    const stepsGoal = await getDailyGoal(userId);
+    const stepsGoal = await db.getDailyGoal(userId);
     if (!stepsGoal || stepsGoal === 0) continue;
-    const steps = await getEntry(userId, now);
+    const steps = await db.getEntry(userId, now);
     if (steps === null) notFilled.push(userId);
   }
   if (notFilled.length === 0) return;

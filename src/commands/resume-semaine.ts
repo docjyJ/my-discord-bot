@@ -1,6 +1,6 @@
 import {AttachmentBuilder, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import DateTime from '../date-time';
-import {renderWeeklySummaryImage} from '../image/renderer';
+import {renderWeeklySummaryImage} from '../image/weekly-summary';
 import {resumeSemaine as resumeLang} from '../lang';
 import {getDataForWeeklySummary} from '../storage';
 

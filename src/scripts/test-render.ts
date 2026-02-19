@@ -1,7 +1,9 @@
 import {mkdirSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
 import DateTime from '../date-time';
-import {renderMonthlySummaryImage, renderPresentationImage, renderWeeklySummaryImage} from '../image/renderer';
+import {renderMonthlySummaryImage} from '../image/monthly-summary';
+import {renderPresentationImage} from '../image/presentation';
+import {renderWeeklySummaryImage} from '../image/weekly-summary';
 
 const OUT_DIR = path.resolve(process.cwd(), 'rendered');
 mkdirSync(OUT_DIR, {recursive: true});

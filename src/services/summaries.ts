@@ -2,7 +2,8 @@ import type {AttachmentBuilder} from 'discord.js';
 import {AttachmentBuilder as DiscordAttachmentBuilder} from 'discord.js';
 import {client} from '../client';
 import type DateTime from '../date-time';
-import {type MonthlySummaryData, renderMonthlySummaryImage, renderWeeklySummaryImage} from '../image/renderer';
+import {type MonthlySummaryData, renderMonthlySummaryImage} from '../image/monthly-summary';
+import {renderWeeklySummaryImage} from '../image/weekly-summary';
 import {getDataForMonthlySummary, getDataForWeeklySummary, isMonthComplete, isWeekComplete} from '../storage';
 
 // Génère les résumés (hebdo/mois) et renvoie les pièces jointes éventuelles pour réponse

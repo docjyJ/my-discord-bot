@@ -1,113 +1,194 @@
-import {type Prisma, PrismaClient} from '@prisma/client';
+import {PrismaClient} from '@prisma/client';
 import type {User} from 'discord.js';
 import DateTime from './date-time';
-import type {MonthlySummaryData, WeeklySummaryData} from './image/renderer';
+import type {MonthlySummaryData} from './image/monthly-summary';
+import type {WeeklySummaryData} from './image/weekly-summary';
 
-const prisma = new PrismaClient();
+class DataBase {
+  private prisma: PrismaClient;
 
-const DAILY_PROMPT_KEY = 'lastDailyPrompt';
+  constructor() {
+    this.prisma = new PrismaClient();
+  }
 
-async function getMeta(key: string) {
-  const meta = await prisma.meta.findUnique({where: {key}, select: {value: true}});
-  return meta?.value || null;
+  private async getMeta(key: string) {
+    const meta = await this.prisma.meta.findUnique({where: {key}, select: {value: true}});
+    return meta?.value || null;
+  }
+
+  private async setMeta(key: string, value: string) {
+    await this.prisma.meta.upsert({
+      where: {key},
+      update: {value},
+      create: {key, value}
+    });
+  }
+
+  async getLastDailyPrompt() {
+    const value = await this.getMeta('lastDailyPrompt');
+    return value ? DateTime.parse(value) : null;
+  }
+
+  async setLastDailyPrompt(date: DateTime) {
+    return this.setMeta('lastDailyPrompt', date.toDateString());
+  }
+
+  async getDailyGoal(userId: string) {
+    const user = await this.prisma.user.findUnique({where: {userId}, select: {dailyStepsGoal: true}});
+    return user ? user.dailyStepsGoal : null;
+  }
+
+  async setDailyGoal(userId: string, dailyStepsGoal: number | null) {
+    await this.prisma.user.upsert({
+      where: {userId},
+      update: {dailyStepsGoal},
+      create: {userId, dailyStepsGoal, weeklyStepsGoal: null}
+    });
+  }
+
+  async getWeeklyGoal(userId: string) {
+    const user = await this.prisma.user.findUnique({where: {userId}, select: {weeklyStepsGoal: true}});
+    return user ? user.weeklyStepsGoal : null;
+  }
+
+  async setWeeklyGoal(userId: string, weeklyStepsGoal: number | null) {
+    await this.prisma.user.upsert({
+      where: {userId},
+      update: {weeklyStepsGoal},
+      create: {userId, dailyStepsGoal: null, weeklyStepsGoal}
+    });
+  }
+
+  async getEntry(userId: string, date: DateTime) {
+    return this.prisma.dailyEntry
+      .findUnique({
+        where: {userId_date: {userId, date: date.toDateString()}},
+        select: {steps: true}
+      })
+      .then(entry => (entry ? entry.steps : null));
+  }
+
+  async setEntry(userId: string, date: DateTime, steps: number | null) {
+    await this.prisma.dailyEntry.upsert({
+      where: {userId_date: {userId, date: date.toDateString()}},
+      update: {steps},
+      create: {
+        user: {connectOrCreate: {where: {userId}, create: {userId, dailyStepsGoal: null, weeklyStepsGoal: null}}},
+        date: date.toDateString(),
+        steps
+      }
+    });
+  }
+
+  async listUsers() {
+    return this.prisma.user
+      .findMany({
+        select: {userId: true},
+        where: {OR: [{dailyStepsGoal: {not: null}}, {weeklyStepsGoal: {not: null}}]}
+      })
+      .then(users => users.map(u => u.userId));
+  }
+
+  async getUser(userId: string) {
+    return this.prisma.user.findUnique({
+      where: {userId},
+      select: {dailyStepsGoal: true, weeklyStepsGoal: true}
+    });
+  }
+
+  async getUserWithEntries(userId: string, dates: DateTime[]) {
+    return this.prisma.user
+      .findUnique({
+        where: {userId},
+        select: {
+          dailyStepsGoal: true,
+          weeklyStepsGoal: true,
+          entries: {where: {date: {in: dates.map(d => d.toDateString())}}, select: {date: true, steps: true}}
+        }
+      })
+      .then(user =>
+        !user
+          ? null
+          : {
+              dailyStepsGoal: user.dailyStepsGoal,
+              weeklyStepsGoal: user.weeklyStepsGoal,
+              entries: new Map(dates.map(d => [d, user.entries.find(e => e.date === d.toDateString())?.steps ?? null]))
+            }
+      );
+  }
+
+  async getUserWithEntriesAndCount(userId: string, dates: DateTime[]) {
+    return this.prisma.user
+      .findUnique({
+        where: {userId},
+        select: {
+          dailyStepsGoal: true,
+          weeklyStepsGoal: true,
+          entries: {where: {date: {in: dates.map(d => d.toDateString())}}, select: {date: true, steps: true}},
+          _count: {select: {entries: {where: {date: {in: dates.map(d => d.toDateString())}, steps: {not: null}}}}}
+        }
+      })
+      .then(user =>
+        !user
+          ? null
+          : {
+              dailyStepsGoal: user.dailyStepsGoal,
+              weeklyStepsGoal: user.weeklyStepsGoal,
+              entries: new Map(dates.map(d => [d, user.entries.find(e => e.date === d.toDateString())?.steps ?? null])),
+              countEntries: user._count.entries
+            }
+      );
+  }
+
+  async cleanDatabase() {
+    await this.prisma.user.deleteMany({
+      where: {
+        dailyStepsGoal: null,
+        weeklyStepsGoal: null,
+        entries: {every: {steps: null}}
+      }
+    });
+    await this.prisma.dailyEntry.deleteMany({where: {steps: null}});
+  }
+
+  async getEntries(userId: string, dates: DateTime[]) {
+    return this.prisma.dailyEntry
+      .findMany({
+        where: {userId, date: {in: dates.map(d => d.toDateString())}},
+        select: {date: true, steps: true}
+      })
+      .then(entries => new Map(dates.map(d => [d, entries.find(e => e.date === d.toDateString())?.steps ?? null])));
+  }
+
+  async listAllEntriesGoal(userId: string, goal: number) {
+    return this.prisma.dailyEntry
+      .findMany({
+        where: {userId, steps: {gte: goal}},
+        select: {date: true},
+        orderBy: {date: 'asc'}
+      })
+      .then(entries => entries.map(e => DateTime.parse(e.date)).filter((d): d is DateTime => d !== null));
+  }
 }
 
-async function setMeta(key: string, value: string) {
-  await prisma.meta.upsert({
-    where: {key},
-    update: {value},
-    create: {key, value}
-  });
-}
-
-export async function getLastDailyPrompt() {
-  const value = await getMeta(DAILY_PROMPT_KEY);
-  return value ? DateTime.parse(value) : null;
-}
-
-export function setLastDailyPrompt(date: DateTime) {
-  return setMeta(DAILY_PROMPT_KEY, date.toDateString());
-}
-
-export async function getDailyGoal(userId: string) {
-  const user = await prisma.user.findUnique({where: {userId}, select: {dailyStepsGoal: true}});
-  return user ? user.dailyStepsGoal : null;
-}
-
-export async function setDailyGoal(userId: string, dailyStepsGoal: number | null) {
-  await prisma.user.upsert({
-    where: {userId},
-    update: {dailyStepsGoal},
-    create: {userId, dailyStepsGoal, weeklyStepsGoal: null}
-  });
-}
-
-export async function getWeeklyGoal(userId: string) {
-  const user = await prisma.user.findUnique({where: {userId}, select: {weeklyStepsGoal: true}});
-  return user ? user.weeklyStepsGoal : null;
-}
-
-export async function setWeeklyGoal(userId: string, weeklyStepsGoal: number | null) {
-  await prisma.user.upsert({
-    where: {userId},
-    update: {weeklyStepsGoal},
-    create: {userId, dailyStepsGoal: null, weeklyStepsGoal}
-  });
-}
-
-export async function getEntry(userId: string, date: DateTime) {
-  const entry = await prisma.dailyEntry.findUnique({
-    where: {userId_date: {userId, date: date.toDateString()}},
-    select: {steps: true}
-  });
-  return entry ? entry.steps : null;
-}
-
-export async function setEntry(userId: string, date: DateTime, steps: number | null) {
-  await prisma.dailyEntry.upsert({
-    where: {userId_date: {userId, date: date.toDateString()}},
-    update: {steps},
-    create: {
-      user: {connectOrCreate: {where: {userId}, create: {userId, dailyStepsGoal: null, weeklyStepsGoal: null}}},
-      date: date.toDateString(),
-      steps
-    }
-  });
-}
-
-export async function listUsers() {
-  const users = await prisma.user.findMany({
-    select: {userId: true},
-    where: {dailyStepsGoal: {not: null}}
-  });
-  return users.map(u => u.userId);
-}
-
-export async function cleanDatabase() {
-  await prisma.user.deleteMany({where: {dailyStepsGoal: null, entries: {every: {steps: null}}}});
-  await prisma.dailyEntry.deleteMany({where: {steps: null}});
-}
+export const db = new DataBase();
 
 export async function getStreak(userId: string, end: DateTime) {
-  const user = await prisma.user.findUnique({where: {userId}, select: {dailyStepsGoal: true}});
+  const user = await db.getUser(userId);
   const goal = user?.dailyStepsGoal ?? null;
   if (!goal || goal <= 0) return {streak: null, goal: null};
   const windowDays = 60;
   const start = end.addDay(1 - windowDays);
-  const dates: string[] = [];
+  const dates: DateTime[] = [];
   for (let i = 0; i < windowDays; i++) {
-    dates.push(start.addDay(i).toDateString());
+    dates.push(start.addDay(i));
   }
-  const entries = await prisma.dailyEntry.findMany({
-    where: {userId, date: {in: dates}, steps: {not: null}},
-    select: {date: true, steps: true}
-  });
-  const map = new Map<string, number>(entries.map(e => [e.date, e.steps as number]));
+  const entries = await db.getEntries(userId, dates);
   let streak = 0;
-  for (let i = 0; i < windowDays; i++) {
-    const d = end.addDay(-i).toDateString();
-    const val = map.get(d);
-    if (val === undefined || val < goal) break;
+  for (let i = windowDays - 1; i >= 0; i--) {
+    const d = dates[i];
+    const val = entries.get(d) ?? null;
+    if (val === null || val < goal) break;
     streak++;
   }
   return {streak, goal};
@@ -127,24 +208,18 @@ export type WeeklyProgress =
 
 export async function getWeeklyProgress(userId: string, date: DateTime): Promise<WeeklyProgress> {
   const monday = date.getMonday();
-  const dates: string[] = [];
+  const dates: DateTime[] = [];
   for (let i = 0; i < 7; i++) {
-    dates.push(monday.addDay(i).toDateString());
+    dates.push(monday.addDay(i));
   }
 
-  const u = await prisma.user.findUnique({
-    where: {userId},
-    select: {
-      weeklyStepsGoal: true,
-      entries: {where: {date: {in: dates}}}
-    }
-  });
+  const u = await db.getUserWithEntries(userId, dates);
 
   if (u === null || u.weeklyStepsGoal === null || u.weeklyStepsGoal <= 0) {
     return {weeklyGoal: null, weeklySteps: null, weeklyRemainingDays: null};
   }
 
-  const totalWeekSteps = u.entries.reduce((acc, e) => acc + (e.steps ?? 0), 0);
+  const totalWeekSteps = Array.from(u.entries.values()).reduce((acc: number, e) => acc + (e ?? 0), 0);
 
   return {
     weeklyGoal: u.weeklyStepsGoal,
@@ -155,28 +230,19 @@ export async function getWeeklyProgress(userId: string, date: DateTime): Promise
 
 export async function getDataForWeeklySummary(user: User, date: DateTime) {
   const userId = user.id;
-  const dates: string[] = [];
+  const dates: DateTime[] = [];
   for (let i = 0; i < 7; i++) {
-    dates.push(date.addDay(i).toDateString());
+    dates.push(date.addDay(i));
   }
 
-  const u = await prisma.user.findUnique({
-    where: {userId},
-    select: {
-      dailyStepsGoal: true,
-      weeklyStepsGoal: true,
-      entries: {where: {date: {in: dates}}},
-      _count: {select: {entries: {where: {steps: {not: null}}}}}
-    }
-  });
+  const u = await db.getUserWithEntriesAndCount(userId, dates);
 
-  const filledEntries = u?.entries.filter(e => e.steps !== null) ?? [];
-  const totalWeekSteps = filledEntries.reduce((acc, e) => acc + (e.steps as number), 0);
+  const totalWeekSteps = Array.from(u?.entries.values() ?? []).reduce((acc: number, e) => acc + (e ?? 0), 0);
 
   const base = {
     date,
-    days: dates.map(d => u?.entries.find(e => e.date === d)?.steps ?? null),
-    countEntries: u?._count.entries ?? 0,
+    days: Array.from(u?.entries.values() ?? []),
+    countEntries: u?.countEntries ?? 0,
     avatarUrl: user.displayAvatarURL({extension: 'png', size: 512}),
     weeklyGoal: u?.weeklyStepsGoal ?? null,
     totalWeekSteps
@@ -186,26 +252,19 @@ export async function getDataForWeeklySummary(user: User, date: DateTime) {
   };
 
   if (u && u.dailyStepsGoal !== null) {
-    const entries = await prisma.dailyEntry.findMany({
-      select: {date: true},
-      where: {userId, steps: {gte: u.dailyStepsGoal}},
-      orderBy: {date: 'asc'}
-    });
+    const entries = await db.listAllEntriesGoal(userId, u.dailyStepsGoal);
 
     let currentStreak = 0;
     let prevDate: DateTime | null = null;
     let bestStreak = 0;
 
-    for (const {date: dateStr} of entries) {
-      const d = DateTime.parse(dateStr);
-      if (d !== null) {
-        // biome-ignore lint/complexity/useOptionalChain: TS2339 sur prevDate?.addDay
-        if (prevDate !== null && prevDate.addDay(1).sameDay(d)) currentStreak++;
-        else currentStreak = 1;
+    for (const d of entries) {
+      // biome-ignore lint/complexity/useOptionalChain: TS2339 sur prevDate?.addDay
+      if (prevDate !== null && prevDate.addDay(1).sameDay(d)) currentStreak++;
+      else currentStreak = 1;
 
-        bestStreak = Math.max(bestStreak, currentStreak);
-        prevDate = d;
-      }
+      bestStreak = Math.max(bestStreak, currentStreak);
+      prevDate = d;
     }
 
     return {
@@ -234,29 +293,15 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
     dates.push(firstDay.addDay(i).toDateString());
   }
 
-  type MonthlyUserSelect = Prisma.UserGetPayload<{
-    select: {
-      dailyStepsGoal: true;
-      weeklyStepsGoal: true;
-      entries: {where: {date: {in: string[]}}};
-      _count: {select: {entries: {where: {steps: {not: null}}}}};
-    };
-  }>;
-
-  const u = (await prisma.user.findUnique({
-    where: {userId},
-    select: {
-      dailyStepsGoal: true,
-      weeklyStepsGoal: true,
-      entries: {where: {date: {in: dates}}},
-      _count: {select: {entries: {where: {steps: {not: null}}}}}
-    }
-  })) as MonthlyUserSelect | null;
+  const u = await db.getUserWithEntriesAndCount(
+    userId,
+    dates.map(d => DateTime.parse(d)).filter((d): d is DateTime => d !== null)
+  );
 
   const base: MonthlySummaryData = {
     date: firstDay,
-    days: dates.map(dateStr => u?.entries.find(e => e.date === dateStr)?.steps ?? null),
-    countEntries: u?._count.entries ?? 0,
+    days: Array.from(u?.entries.values() ?? []),
+    countEntries: u?.countEntries ?? 0,
     avatarUrl: user.displayAvatarURL({extension: 'png', size: 512}),
     goal: null,
     bestStreak: null,
@@ -265,26 +310,19 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
   };
 
   if (u && u.dailyStepsGoal !== null) {
-    const entries = await prisma.dailyEntry.findMany({
-      select: {date: true},
-      where: {userId, steps: {gte: u.dailyStepsGoal}},
-      orderBy: {date: 'asc'}
-    });
+    const entries = await db.listAllEntriesGoal(userId, u.dailyStepsGoal);
 
     let currentStreak = 0;
     let prevDate: DateTime | null = null;
     let bestStreak = 0;
 
-    for (const {date: dateStr} of entries) {
-      const d = DateTime.parse(dateStr);
-      if (d !== null) {
-        // biome-ignore lint/complexity/useOptionalChain: TS2339 sur prevDate?.addDay
-        if (prevDate !== null && prevDate.addDay(1).sameDay(d)) currentStreak++;
-        else currentStreak = 1;
+    for (const d of entries) {
+      // biome-ignore lint/complexity/useOptionalChain: TS2339 sur prevDate?.addDay
+      if (prevDate !== null && prevDate.addDay(1).sameDay(d)) currentStreak++;
+      else currentStreak = 1;
 
-        bestStreak = Math.max(bestStreak, currentStreak);
-        prevDate = d;
-      }
+      bestStreak = Math.max(bestStreak, currentStreak);
+      prevDate = d;
     }
     return {
       ...base,
@@ -299,37 +337,23 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
 
 export async function isWeekComplete(userId: string, date: DateTime) {
   const monday = date.getMonday();
-  const dates: string[] = [];
+  const dates = [];
   for (let i = 0; i < 7; i++) {
-    dates.push(monday.addDay(i).toDateString());
+    dates.push(monday.addDay(i));
   }
 
-  const entries = await prisma.dailyEntry.findMany({
-    where: {userId, date: {in: dates}},
-    select: {date: true, steps: true}
-  });
-  const byDate = new Map(entries.map(e => [e.date, e.steps]));
-  return dates.every(d => {
-    const val = byDate.get(d);
-    return val !== undefined && val !== null;
-  });
+  const entries = await db.getEntries(userId, dates);
+  return Array.from(entries.values()).every(v => v !== null);
 }
 
 export async function isMonthComplete(userId: string, date: DateTime) {
   const firstDay = date.firstDayOfMonth();
   const daysInMonth = firstDay.daysInMonth();
-  const dates: string[] = [];
+  const dates = [];
   for (let i = 0; i < daysInMonth; i++) {
-    dates.push(firstDay.addDay(i).toDateString());
+    dates.push(firstDay.addDay(i));
   }
 
-  const entries = await prisma.dailyEntry.findMany({
-    where: {userId, date: {in: dates}},
-    select: {date: true, steps: true}
-  });
-  const byDate = new Map(entries.map(e => [e.date, e.steps]));
-  return dates.every(d => {
-    const val = byDate.get(d);
-    return val !== undefined && val !== null;
-  });
+  const entries = await db.getEntries(userId, dates);
+  return Array.from(entries.values()).every(v => v !== null);
 }

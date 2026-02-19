@@ -1,9 +1,9 @@
 import {ActionRowBuilder, AttachmentBuilder, MessageFlags, ModalBuilder, type ModalSubmitInteraction, TextInputBuilder, TextInputStyle} from 'discord.js';
 import DateTime from '../date-time';
-import {renderPresentationImage} from '../image/renderer';
+import {renderPresentationImage} from '../image/presentation';
 import {saisir} from '../lang';
 import {maybeSendSummariesAfterEntry} from '../services/summaries';
-import {getEntry, getStreak, getWeeklyProgress, setEntry} from '../storage';
+import {db, getStreak, getWeeklyProgress} from '../storage';
 
 const modalId = 'saisir';
 
@@ -13,7 +13,7 @@ async function getModal(date: DateTime, userId?: string) {
   const pasInput = new TextInputBuilder().setCustomId('pas').setLabel(saisir.modal.stepLabel).setPlaceholder(saisir.modal.stepPlaceholder).setStyle(TextInputStyle.Short).setRequired(false);
 
   if (userId) {
-    const existing = await getEntry(userId, date);
+    const existing = await db.getEntry(userId, date);
     if (existing !== undefined && existing !== null) {
       pasInput.setValue(String(existing));
     }
@@ -45,13 +45,13 @@ async function executor(interaction: ModalSubmitInteraction, [dateISO]: string[]
   }
 
   const rawStr = (interaction.fields.getTextInputValue('pas') ?? '').trim();
-  const steps = await getEntry(interaction.user.id, date);
+  const steps = await db.getEntry(interaction.user.id, date);
 
   if (rawStr === '') {
     if (steps === null) {
       return interaction.reply({content: saisir.replyAction.noChange(date), flags: MessageFlags.Ephemeral});
     }
-    await setEntry(interaction.user.id, date, null);
+    await db.setEntry(interaction.user.id, date, null);
     return interaction.reply({content: saisir.replyAction.entryDeleted(interaction.user.id, date)});
   }
 
@@ -64,7 +64,7 @@ async function executor(interaction: ModalSubmitInteraction, [dateISO]: string[]
     return interaction.reply({content: saisir.replyAction.noChange(date), flags: MessageFlags.Ephemeral});
   }
 
-  await setEntry(interaction.user.id, date, raw);
+  await db.setEntry(interaction.user.id, date, raw);
   const {attachments: summaryAttachments, hasWeek, hasMonth} = await maybeSendSummariesAfterEntry(interaction.user.id, date);
 
   let extraSummaryText = '';

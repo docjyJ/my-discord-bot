@@ -1,11 +1,11 @@
 import {ActionRowBuilder, MessageFlags, ModalBuilder, type ModalSubmitInteraction, TextInputBuilder, TextInputStyle} from 'discord.js';
 import {objectif} from '../lang';
-import {getDailyGoal, getWeeklyGoal, setDailyGoal, setWeeklyGoal} from '../storage';
+import {db} from '../storage';
 
 export const modalId = 'objectif';
 
 async function getModal(userId: string) {
-  const [currentDaily, currentWeekly] = await Promise.all([getDailyGoal(userId), getWeeklyGoal(userId)]);
+  const [currentDaily, currentWeekly] = await Promise.all([db.getDailyGoal(userId), db.getWeeklyGoal(userId)]);
   const modal = new ModalBuilder().setCustomId(modalId).setTitle(objectif.modal.title);
 
   const dailyInput = new TextInputBuilder().setCustomId('pas_jour').setLabel(objectif.modal.stepLabel).setPlaceholder(objectif.modal.stepPlaceholder).setStyle(TextInputStyle.Short).setRequired(false);
@@ -33,7 +33,7 @@ async function executor(interaction: ModalSubmitInteraction) {
   const rawDailyStr = (interaction.fields.getTextInputValue('pas_jour') ?? '').trim();
   const rawWeeklyStr = (interaction.fields.getTextInputValue('pas_semaine') ?? '').trim();
 
-  const [currentDaily, currentWeekly] = await Promise.all([getDailyGoal(interaction.user.id), getWeeklyGoal(interaction.user.id)]);
+  const [currentDaily, currentWeekly] = await Promise.all([db.getDailyGoal(interaction.user.id), db.getWeeklyGoal(interaction.user.id)]);
 
   let changed = false;
   const messages: string[] = [];
@@ -41,7 +41,7 @@ async function executor(interaction: ModalSubmitInteraction) {
   // Daily
   if (rawDailyStr === '') {
     if (currentDaily !== null) {
-      await setDailyGoal(interaction.user.id, null);
+      await db.setDailyGoal(interaction.user.id, null);
       changed = true;
       messages.push(objectif.replyAction.noDailyGoal(interaction.user.id));
     }
@@ -51,7 +51,7 @@ async function executor(interaction: ModalSubmitInteraction) {
       return interaction.reply({content: objectif.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
     }
     if (raw !== currentDaily) {
-      await setDailyGoal(interaction.user.id, raw);
+      await db.setDailyGoal(interaction.user.id, raw);
       changed = true;
       messages.push(objectif.replyAction.dailyGoal(interaction.user.id, raw));
     }
@@ -60,7 +60,7 @@ async function executor(interaction: ModalSubmitInteraction) {
   // Weekly
   if (rawWeeklyStr === '') {
     if (currentWeekly !== null) {
-      await setWeeklyGoal(interaction.user.id, null);
+      await db.setWeeklyGoal(interaction.user.id, null);
       changed = true;
       messages.push(objectif.replyAction.noWeeklyGoal(interaction.user.id));
     }
@@ -70,7 +70,7 @@ async function executor(interaction: ModalSubmitInteraction) {
       return interaction.reply({content: objectif.replyAction.invalidValue, flags: MessageFlags.Ephemeral});
     }
     if (raw !== currentWeekly) {
-      await setWeeklyGoal(interaction.user.id, raw);
+      await db.setWeeklyGoal(interaction.user.id, raw);
       changed = true;
       messages.push(objectif.replyAction.weeklyGoal(interaction.user.id, raw));
     }

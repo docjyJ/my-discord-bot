@@ -1,6 +1,6 @@
 import {AttachmentBuilder, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import DateTime from '../date-time';
-import {renderMonthlySummaryImage} from '../image/renderer';
+import {renderMonthlySummaryImage} from '../image/monthly-summary';
 import {resumeMois as resumeLang} from '../lang';
 import {getDataForMonthlySummary} from '../storage';
 

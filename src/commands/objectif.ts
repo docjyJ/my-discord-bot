@@ -1,7 +1,7 @@
 import {type ChatInputCommandInteraction, SlashCommandBuilder} from 'discord.js';
 import {objectif} from '../lang';
 import {getObjectiveModal} from '../modals';
-import {getDailyGoal, getWeeklyGoal} from '../storage';
+import {db} from '../storage';
 
 export const commandName = 'objectif';
 
@@ -14,7 +14,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const optUser = interaction.options.getUser('utilisateur');
 
   if (optUser) {
-    const [dailyGoal, weeklyGoal] = await Promise.all([getDailyGoal(optUser.id), getWeeklyGoal(optUser.id)]);
+    const [dailyGoal, weeklyGoal] = await Promise.all([db.getDailyGoal(optUser.id), db.getWeeklyGoal(optUser.id)]);
     if (dailyGoal === null && weeklyGoal === null) {
       return interaction.reply({content: objectif.replySelect.noGoal(optUser.id)});
     }
