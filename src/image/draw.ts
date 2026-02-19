@@ -120,6 +120,18 @@ export default class Draw {
     this.ctx.fill();
   }
 
+  public drawHorizontalDashedLine(x1: number, x2: number, y: number, lineWidth: number, color: string | CanvasGradient, dash: number[] = [10, 6]) {
+    this.ctx.save();
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = lineWidth;
+    this.ctx.setLineDash(dash);
+    this.ctx.beginPath();
+    this.ctx.moveTo(x1, y);
+    this.ctx.lineTo(x2, y);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
   public toBuffer() {
     return this.canvas.toBuffer('image/png');
   }

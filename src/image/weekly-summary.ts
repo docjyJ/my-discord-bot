@@ -44,10 +44,18 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
   const pad = 32;
   const topPad = 80;
   const rightMargin = 48;
-  const bottomMargin = 48;
+
+  const weeklyGoalValid = data.weeklyGoal !== null && data.weeklyGoal > 0;
+  const weeklySucceeded = weeklyGoalValid && total >= (data.weeklyGoal as number);
+  const hasDailyGoal = data.goal !== null && data.goal > 0;
+  const allDailySucceeded = hasDailyGoal && filledDays.length > 0 && filledDays.every(d => d >= (data.goal as number));
+  const isGoldTheme = weeklySucceeded && allDailySucceeded;
+
+  const barAreaHeight = 52;
+  const bottomMargin = 28 + barAreaHeight;
 
   const cardW = 360;
-  const cardH = 200;
+  const cardH = 210;
   const statsY = height - bottomMargin - cardH;
 
   const availableTop = Math.max(0, statsY - topPad);
@@ -66,12 +74,6 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
   const lineStart = statsY + 24;
   const lineStep = 38;
   let currentLine = 0;
-
-  draw.text(resumeLang.embed.fieldTotal(total), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
-  currentLine++;
-
-  draw.text(resumeLang.embed.fieldAverage(Math.round(average)), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
-  currentLine++;
 
   draw.text(resumeLang.embed.fieldDaysEntered(data.countEntries), pad + 18, lineStart + currentLine * lineStep, '#cbd5e1', 26, 'left');
   currentLine++;
@@ -110,58 +112,18 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
     const h = Math.max(0, Math.round(innerH * ((val ?? 0) / maxVal)));
     const by = innerY + innerH - h;
     if (val !== null) {
-      // Déterminer si l'utilisateur a un objectif hebdo valide
-      const weeklyGoalValid = data.weeklyGoal !== null && data.weeklyGoal > 0;
-      const weeklySucceeded = weeklyGoalValid && total >= (data.weeklyGoal as number);
-
-      // L'utilisateur a-t-il un objectif journalier ?
-      const hasDailyGoal = data.goal !== null && data.goal > 0;
-
       let topColor: string;
       let bottomColor: string;
 
-      if (!hasDailyGoal) {
-        // Cas: pas d'objectif journalier
-        if (!weeklyGoalValid) {
-          // Pas d'objectif jour ni hebdo => comportement par défaut : barres bleu
-          topColor = '#60a5fa';
-          bottomColor = '#c084fc';
-        } else {
-          // Pas d'objectif jour mais il y a un objectif hebdo
-          if (weeklySucceeded) {
-            // Semaine réussie => colorer en jaune seulement les jours où il y a des pas (>0)
-            if ((val as number) > 0) {
-              topColor = '#eab308';
-              bottomColor = '#f1dd89';
-            } else {
-              // pas de pas enregistrés -> rester bleu
-              topColor = '#60a5fa';
-              bottomColor = '#c084fc';
-            }
-          } else {
-            // Semaine échouée => barres bleues
-            topColor = '#60a5fa';
-            bottomColor = '#c084fc';
-          }
-        }
+      if (isGoldTheme) {
+        topColor = '#eab308';
+        bottomColor = '#f1dd89';
+      } else if (hasDailyGoal && val >= (data.goal as number)) {
+        topColor = '#22c55e';
+        bottomColor = '#84cc16';
       } else {
-        // Cas: il y a un objectif journalier
-        if (val >= data.goal) {
-          // Jour "réussi"
-          if (weeklyGoalValid && weeklySucceeded) {
-            // Si objectif hebdo présent et semaine réussie => jaune
-            topColor = '#eab308';
-            bottomColor = '#f1dd89';
-          } else {
-            // Sinon garder vert pour jours réussis
-            topColor = '#22c55e';
-            bottomColor = '#84cc16';
-          }
-        } else {
-          // Jour non atteint => bleu
-          topColor = '#60a5fa';
-          bottomColor = '#c084fc';
-        }
+        topColor = '#60a5fa';
+        bottomColor = '#c084fc';
       }
 
       const g = draw.createLinearGradient(bx, by, bx, innerY + innerH, topColor, bottomColor);
@@ -175,5 +137,48 @@ export async function renderWeeklySummaryImage(data: WeeklySummaryData) {
     const yLabel = chartY + chartH - 20;
     draw.text(dayLabel, bx + barW / 2, yLabel, '#94a3b8', 20);
   }
+
+  if (data.goal !== null && data.goal > 0) {
+    const goalY = innerY + innerH - Math.round(innerH * (data.goal / maxVal));
+    draw.drawHorizontalDashedLine(chartX, chartX + chartW, goalY, 2, '#94a3b8');
+  }
+
+  const barPadding = 12;
+  const innerBarPad = 6;
+  const barHeight = 32;
+  const barRadius = barHeight / 2;
+  const barWidth = width - barPadding * 2;
+  const barY = height - barPadding - barHeight;
+
+  const barBg = draw.createLinearGradient(barPadding, barY, barPadding, barY + barHeight, '#0b1220', '#0f172a');
+  draw.roundedRectFill(barPadding, barY, barWidth, barHeight, barRadius, barBg);
+  draw.roundedRectFill(barPadding + innerBarPad, barY + innerBarPad, barWidth - innerBarPad * 2, barHeight - innerBarPad * 2, barRadius, '#374151');
+
+  let topColor: string;
+  let bottomColor: string;
+  if (isGoldTheme) {
+    topColor = '#eab308';
+    bottomColor = '#f1dd89';
+  } else if (weeklySucceeded) {
+    topColor = '#22c55e';
+    bottomColor = '#84cc16';
+  } else {
+    topColor = '#60a5fa';
+    bottomColor = '#c084fc';
+  }
+
+  const minFillWidth = barHeight - innerBarPad * 2;
+  if (weeklyGoalValid) {
+    const weeklyGoal = data.weeklyGoal as number;
+    const ratio = Math.min(1, total / weeklyGoal);
+    const fillWidth = minFillWidth + Math.round((barWidth - innerBarPad * 2 - minFillWidth) * ratio);
+    if (fillWidth > 0) {
+      const g = draw.createLinearGradient(barPadding, barY, barPadding + barWidth, barY, topColor, bottomColor);
+      draw.roundedRectFill(barPadding + innerBarPad, barY + innerBarPad, fillWidth, barHeight - innerBarPad * 2, barRadius, g);
+    }
+  }
+  const label = resumeLang.image.barLabel(total, average);
+  draw.text(label, width / 2, barY - 14, '#e5e7eb', 20);
+
   return draw.toBuffer();
 }

@@ -1,6 +1,7 @@
 import type DateTime from './date-time';
 
 const fr = 'fr-FR';
+const nbFmt = new Intl.NumberFormat(fr);
 
 export const lang = {
   scheduler: {
@@ -30,7 +31,7 @@ export const lang = {
   },
   deploy: {
     start: 'Synchronisation complète des commandes (/)...',
-    success: (count: number) => `Commandes synchronisées (${count}). ✅`,
+    success: (count: number) => `Commandes synchronisées (${nbFmt.format(count)}). ✅`,
     error: 'Erreur lors du déploiement des commandes'
   }
 };
@@ -51,16 +52,16 @@ export const objectif = {
     noDailyGoal: (userId: string) => `<@${userId}> a supprimé son objectif quotidien.`,
     noWeeklyGoal: (userId: string) => `<@${userId}> a supprimé son objectif hebdomadaire.`,
     noChange: "Tu n'as pas changé tes objectifs.",
-    dailyGoal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${goal} pas par jour.`,
-    weeklyGoal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${goal} pas par semaine.`,
+    dailyGoal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${nbFmt.format(goal)} pas par jour.`,
+    weeklyGoal: (userId: string, goal: number) => `<@${userId}> a un nouvel objectif de ${nbFmt.format(goal)} pas par semaine.`,
     invalidValue: 'valeur invalide: doit être un entier >= 0.'
   },
   replySelect: {
     noGoal: (userId: string) => `<@${userId}> n'a pas d'objectif.`,
     goals: (userId: string, dailyGoal: number | null, weeklyGoal: number | null) => {
       const parts: string[] = [];
-      if (dailyGoal !== null) parts.push(`objectif de ${dailyGoal} pas par jour`);
-      if (weeklyGoal !== null) parts.push(`objectif de ${weeklyGoal} pas par semaine`);
+      if (dailyGoal !== null) parts.push(`un objectif de ${nbFmt.format(dailyGoal)} pas par jour`);
+      if (weeklyGoal !== null) parts.push(`un objectif de ${nbFmt.format(weeklyGoal)} pas par semaine`);
       return `<@${userId}> a ${parts.join(' et ')}.`;
     }
   }
@@ -94,19 +95,11 @@ export const saisir = {
   },
   image: {
     dateTitle: (date: DateTime) => date.fullLocalDate(fr),
-    streak: (days: number) => (days === 1 ? '1 jour' : `${days} jours`),
+    streak: (days: number) => (days === 1 ? '1 jour' : `${nbFmt.format(days)} jours`),
     reached: 'Félicitations, tu as atteint ton objectif.',
-    remaining: (remaining: number) => `Il te reste ${remaining} pas pour atteindre ton objectif.`,
-    weekly: {
-      message1: (remaining: number, perDay: number) => `Il te reste ${remaining} pas (soit ${perDay} par jour) pour réussir ton objectif hebdomadaire.`,
-      message2: (remaining: number) => `Il te reste ${remaining} pas pour réussir ton objectif hebdomadaire.`,
-      message3: 'Félicitation tu a atein ton objectif hebdomadaire',
-      message4: 'Félicitation tu as réussi ton objectif journalier',
-      message5: (remaining: number) => `Félicitation tu as réussi ton objectif journalier.\nIl te reste ${remaining} pas pour réussir ton objectif hebdomadaire.`,
-      message6: (remaining: number, perDay: number) =>
-        `Félicitation tu as réussi ton objectif journalier.\nIl te reste ${remaining} pas (soit ${perDay} par jour) pour réussir ton objectif hebdomadaire.`,
-      message7: 'Félicitation tu as réussi ton objectif journalier et hebdomadaire'
-    }
+    weeklyGoalSuccess: 'Félicitation tu as atteint ton objectif hebdomadaire',
+    dailyGoalSuccess: 'Félicitation tu as réussi ton objectif journalier',
+    allGoalSuccess: 'Félicitation tu as réussi ton objectif journalier et hebdomadaire'
   }
 };
 
@@ -117,11 +110,9 @@ export const resumeSemaine = {
   },
   embed: {
     title: 'Résumé hebdomadaire',
-    fieldTotal: (steps: number) => `Total : ${steps} pas`,
-    fieldAverage: (steps: number) => `Moyenne : ${steps} pas/jour`,
-    fieldDaysEntered: (days: number) => (days === 1 ? 'Total saisis : 1 jour' : `Total saisis : ${days} jours`),
-    fieldDaysSucceeded: (days: number) => (days === 1 ? 'Total réussis : 1 jour' : `Total réussis : ${days} jours`),
-    fieldBestStreak: (days: number) => (days === 1 ? 'Meilleure série : 1 jour' : `Meilleure série : ${days} jours`)
+    fieldDaysEntered: (days: number) => (days === 1 ? 'Total saisis : 1 jour' : `Total saisis : ${nbFmt.format(days)} jours`),
+    fieldDaysSucceeded: (days: number) => (days === 1 ? 'Total réussis : 1 jour' : `Total réussis : ${nbFmt.format(days)} jours`),
+    fieldBestStreak: (days: number) => (days === 1 ? 'Meilleure série : 1 jour' : `Meilleure série : ${nbFmt.format(days)} jours`)
   },
   replyAction: {
     invalidMonday: 'Date du lundi invalide.',
@@ -129,7 +120,8 @@ export const resumeSemaine = {
   },
   image: {
     dayLetters: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-    title: (monday: DateTime) => `Semaine du ${monday.shortLocalDate(fr)} au ${monday.addDay(6).shortLocalDate(fr, true)}`
+    title: (monday: DateTime) => `Semaine du ${monday.shortLocalDate(fr)} au ${monday.addDay(6).shortLocalDate(fr, true)}`,
+    barLabel: (total: number, average: number) => `${nbFmt.format(total)} - Soit : ${nbFmt.format(average)} par jour`
   }
 };
 
@@ -142,9 +134,9 @@ export const resumeMois = {
     title: 'Résumé mensuel',
     fieldTotal: (steps: number) => `Total : ${steps} pas`,
     fieldAverage: (steps: number) => `Moyenne : ${steps} pas/jour`,
-    fieldDaysEntered: (days: number) => (days === 1 ? 'Total saisis : 1 jour' : `Total saisis : ${days} jours`),
-    fieldDaysSucceeded: (days: number) => (days === 1 ? 'Total réussis : 1 jour' : `Total réussis : ${days} jours`),
-    fieldBestStreak: (days: number) => (days === 1 ? 'Meilleure série : 1 jour' : `Meilleure série : ${days} jours`)
+    fieldDaysEntered: (days: number) => (days === 1 ? 'Total saisis : 1 jour' : `Total saisis : ${nbFmt.format(days)} jours`),
+    fieldDaysSucceeded: (days: number) => (days === 1 ? 'Total réussis : 1 jour' : `Total réussis : ${nbFmt.format(days)} jours`),
+    fieldBestStreak: (days: number) => (days === 1 ? 'Meilleure série : 1 jour' : `Meilleure série : ${nbFmt.format(days)} jours`)
   },
   replyAction: {
     invalidDate: 'Date invalide.',

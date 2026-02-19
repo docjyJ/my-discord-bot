@@ -197,6 +197,7 @@ function* weeklySummaryBuildAll(prefix: string, date: DateTime, countEntries: nu
   yield* weeklySummaryBuildGroup(`${prefix}-0-no`, date, [6000, 7000, 8000, null, 5000, 4000, null], countEntries, null);
   yield* weeklySummaryBuildGroup(`${prefix}-1-fail`, date, [6000, 7000, 8000, null, 5000, 4000, null], countEntries, {weeklyGoal: 40000});
   yield* weeklySummaryBuildGroup(`${prefix}-2-success`, date, [11000, null, 8000, null, 10000, 12000, 7000], countEntries, {weeklyGoal: 40000});
+  yield* weeklySummaryBuildGroup(`${prefix}-3-success-full`, date, [11000, 9000, 8000, 8000, 10000, 12000, 9000], countEntries, {weeklyGoal: 40000});
 }
 
 function* monthlySummaryBuildTests(prefix: string, date: DateTime, days: (number | null)[], countEntries: number) {
