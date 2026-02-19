@@ -177,19 +177,16 @@ export async function getStreak(userId: string, end: DateTime) {
   const user = await db.getUser(userId);
   const goal = user?.dailyStepsGoal ?? null;
   if (!goal || goal <= 0) return {streak: null, goal: null};
-  const windowDays = 60;
-  const start = end.addDay(1 - windowDays);
-  const dates: DateTime[] = [];
-  for (let i = 0; i < windowDays; i++) {
-    dates.push(start.addDay(i));
+  const entries = await db.listAllEntriesGoal(userId, goal);
+  let start = entries.length - 1;
+  while (start >= 0 && entries[start].isAfter(end)) {
+    start--;
   }
-  const entries = await db.getEntries(userId, dates);
   let streak = 0;
-  for (let i = windowDays - 1; i >= 0; i--) {
-    const d = dates[i];
-    const val = entries.get(d) ?? null;
-    if (val === null || val < goal) break;
-    streak++;
+  for (let i = start; i >= 0; i--) {
+    const expected = end.addDay(-streak);
+    if (entries[i].sameDay(expected)) streak++;
+    else break;
   }
   return {streak, goal};
 }

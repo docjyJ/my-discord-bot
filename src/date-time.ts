@@ -64,6 +64,14 @@ export default class DateTime {
     return this.date.getDate() === other.date.getDate() && this.date.getMonth() === other.date.getMonth() && this.date.getFullYear() === other.date.getFullYear();
   }
 
+  isAfter(other: DateTime) {
+    return (
+      this.date.getFullYear() > other.date.getFullYear()
+      || (this.date.getFullYear() === other.date.getFullYear()
+        && (this.date.getMonth() > other.date.getMonth() || (this.date.getMonth() === other.date.getMonth() && this.date.getDate() > other.date.getDate())))
+    );
+  }
+
   day() {
     return this.date.getDate();
   }
