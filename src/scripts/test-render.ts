@@ -202,7 +202,32 @@ function* weeklySummaryBuildAll(prefix: string, date: DateTime, countEntries: nu
 
 function* monthlySummaryBuildTests(prefix: string, date: DateTime, days: (number | null)[], countEntries: number) {
   yield* monthlySummaryBuildGroup(`${prefix}-0-no`, date, days, countEntries, null);
-  yield* monthlySummaryBuildGroup(`${prefix}-1-yes`, date, days, countEntries, {weeklyGoal: 40000});
+  yield* monthlySummaryBuildGroup(`${prefix}-1-yes`, date, days, countEntries, {weeklyGoal: 60000});
+}
+
+function filledDays(prevDays: number, monthDays: number, value: number): number[] {
+  return Array.from({length: prevDays + monthDays}, () => value);
+}
+
+// biome-ignore lint/style/noNonNullAssertion: Test code
+const DATE_FEB_MON = DateTime.parse('2021-02-01')!;
+// biome-ignore lint/style/noNonNullAssertion: Test code
+const DATE_JAN_SAT = DateTime.parse('2022-01-01')!;
+// biome-ignore lint/style/noNonNullAssertion: Test code
+const DATE_MAR_MON = DateTime.parse('2021-03-01')!;
+// biome-ignore lint/style/noNonNullAssertion: Test code
+const DATE_SEP_THU = DateTime.parse('2022-09-01')!;
+
+function* monthlySummaryLayoutTests(prefix: string) {
+  const goal = 15000;
+  const weeklyGoal = 105000;
+  const daily = {goal, bestStreak: 28, countSuccesses: 28};
+  const weekly = {weeklyGoal};
+
+  yield monthlySummaryBuildOneRun(`${prefix}-feb-mon.png`, DATE_FEB_MON, filledDays(0, 28, goal), 28, daily, weekly);
+  yield monthlySummaryBuildOneRun(`${prefix}-jan-sat.png`, DATE_JAN_SAT, filledDays(5, 31, goal), 31, daily, weekly);
+  yield monthlySummaryBuildOneRun(`${prefix}-mar-mon.png`, DATE_MAR_MON, filledDays(0, 31, goal), 31, daily, weekly);
+  yield monthlySummaryBuildOneRun(`${prefix}-sep-thu.png`, DATE_SEP_THU, filledDays(3, 30, goal), 30, daily, weekly);
 }
 
 function* allBuilds() {
@@ -211,9 +236,44 @@ function* allBuilds() {
   yield* monthlySummaryBuildTests(
     'monthly-summary',
     DATE_MONTH,
-    [12000, null, 7000, 13000, 8000, 14000, 3000, 6000, null, 9000, 2000, 11000, 8000, 20000, 7500, 12000, null, 4000, 3000, 10000, 9000, 8000, 7000, 6000],
+    [
+      9500,
+      11000,
+      12000,
+      null,
+      7000,
+      13000,
+      8000,
+      14000,
+      3000,
+      6000,
+      null,
+      9000,
+      2000,
+      11000,
+      8000,
+      20000,
+      7500,
+      12000,
+      null,
+      4000,
+      3000,
+      10000,
+      9000,
+      8000,
+      8500,
+      10000,
+      9000,
+      9500,
+      3000,
+      2000,
+      1000,
+      9000,
+      1000
+    ],
     53
   );
+  yield* monthlySummaryLayoutTests('monthly-layout');
 }
 
 async function main() {

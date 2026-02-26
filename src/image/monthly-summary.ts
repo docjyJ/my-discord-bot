@@ -29,7 +29,12 @@ export type MonthlySummaryData = {
   );
 
 export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
-  const filledDays = data.days.filter((d): d is number => d !== null);
+  const firstDay = data.date.firstDayOfMonth();
+  const firstWeekDay = firstDay.weekDay();
+  const prevDaysCount = firstWeekDay - 1;
+
+  const currentMonthDays = data.days.slice(prevDaysCount);
+  const filledDays = currentMonthDays.filter((d): d is number => d !== null);
   const total = filledDays.reduce((acc, val) => acc + val, 0);
   const average = filledDays.length > 0 ? total / filledDays.length : 0;
   const width = 1200;
@@ -84,7 +89,6 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
     currentLine++;
   }
 
-  // Grille mensuelle 5×7
   const gapLeftToChart = 24;
   const chartX = pad + cardW + gapLeftToChart;
   const chartY = topPad;
@@ -93,32 +97,77 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
   const chartBg = draw.createLinearGradient(chartX, chartY, chartX + chartW, chartY + chartH, '#0b1220', '#0f172a');
   draw.roundedRectFill(chartX, chartY, chartW, chartH, 20, chartBg);
 
-  const innerPad = 20; // padding réduit pour plus d'espace
+  const innerPad = 20;
   const innerX = chartX + innerPad;
   const innerY = chartY + innerPad;
   const innerW = chartW - innerPad * 2;
   const innerH = chartH - innerPad * 2;
 
   const cols = 7;
-  const labelHeight = 24; // espace réservé en haut pour les labels Lun..Dim
-  const dayLabelHeight = 20; // non utilisé directement mais réservé dans le calcul de hauteur
+  const headerLabelHeight = 24;
+  const barHeight = 8;
+  const barGap = 6;
   const gapX = 12;
-  const gapY = 16;
+  const gapY = 10;
 
   const cellW = (innerW - gapX * (cols - 1)) / cols;
 
-  // Premier jour du mois + calcul dynamique du nombre de lignes (4..6)
-  const firstDay = data.date.firstDayOfMonth();
-  const firstWeekDay = firstDay.weekDay(); // 1 = lundi, 7 = dimanche
-  const daysInMonth = data.days.length;
-  const rowsNeeded = Math.ceil((firstWeekDay - 1 + daysInMonth) / cols);
+  const daysInMonth = data.days.length - prevDaysCount;
+  const rowsNeeded = Math.ceil((prevDaysCount + daysInMonth) / cols);
   const rows = Math.max(4, Math.min(6, rowsNeeded));
-  console.log(firstDay, firstWeekDay);
 
-  const cellH = (innerH - labelHeight - dayLabelHeight - gapY * (rows - 1)) / rows;
+  const fixedPerRow = barGap + barHeight;
+  const cellH = (innerH - headerLabelHeight - fixedPerRow * rows - gapY * (rows - 1)) / rows;
+  const rowTotalHeight = cellH + fixedPerRow;
   const maxRadius = Math.min(cellW, cellH) / 2;
 
-  // Labels des jours de la semaine en haut
+  const hasDailyGoal = data.goal !== null && data.goal > 0;
+  const weeklyGoalValid = data.weeklyGoal !== null && data.weeklyGoal > 0;
+
+  type GridDay = {steps: number | null; dayNum: number; isCurrentMonth: boolean};
+  const allGridDays: (GridDay | null)[] = [];
+  const totalGridCells = rows * cols;
+
+  for (let i = 0; i < data.days.length; i++) {
+    const isCurrentMonth = i >= prevDaysCount;
+    const dayDate = firstDay.addDay(i - prevDaysCount);
+    allGridDays.push({
+      steps: data.days[i],
+      dayNum: dayDate.day(),
+      isCurrentMonth
+    });
+  }
+
+  while (allGridDays.length < totalGridCells) {
+    allGridDays.push(null);
+  }
+
+  const weekTotals: number[] = [];
+  const weeklySucceeded: boolean[] = [];
+  const weekAllDailySucceeded: boolean[] = [];
+  for (let row = 0; row < rows; row++) {
+    let weekTotal = 0;
+    let allDailyOk = true;
+    let hasAnyEntry = false;
+    for (let col = 0; col < cols; col++) {
+      const gridIdx = row * cols + col;
+      const day = allGridDays[gridIdx];
+      if (day && day.steps !== null) {
+        weekTotal += day.steps;
+        hasAnyEntry = true;
+        if (hasDailyGoal && day.steps < (data.goal as number)) {
+          allDailyOk = false;
+        }
+      } else if (day?.isCurrentMonth) {
+        allDailyOk = false;
+      }
+    }
+    if (!hasAnyEntry) allDailyOk = false;
+    weekTotals.push(weekTotal);
+    weeklySucceeded.push(weeklyGoalValid && weekTotal >= (data.weeklyGoal as number));
+    weekAllDailySucceeded.push(hasDailyGoal && allDailyOk);
+  }
+
   for (let col = 0; col < cols; col++) {
     const x = innerX + col * (cellW + gapX) + cellW / 2;
     const y = innerY + 12;
@@ -126,97 +175,117 @@ export async function renderMonthlySummaryImage(data: MonthlySummaryData) {
     draw.text(dayLabel, x, y, '#94a3b8', 16);
   }
 
-  // Dessiner les anneaux pour chaque jour
-  const ringWidth = Math.max(4, Math.min(10, maxRadius * 0.2)); // trait plus fin
-  for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
-    const dayIndex = dayNum - 1;
-    const steps = data.days[dayIndex];
+  const ringWidth = Math.max(4, Math.min(10, maxRadius * 0.2));
+  const circleRadius = maxRadius * 0.95;
+  for (let gridIdx = 0; gridIdx < totalGridCells; gridIdx++) {
+    const day = allGridDays[gridIdx];
+    if (!day) continue;
 
-    // Calculer position (0-index depuis lundi)
-    const totalDays = firstWeekDay - 1 + dayNum;
-    const col = (totalDays - 1) % cols;
-    const row = Math.floor((totalDays - 1) / cols);
-    if (row >= rows) continue;
+    const col = gridIdx % cols;
+    const row = Math.floor(gridIdx / cols);
 
     const x = innerX + col * (cellW + gapX) + cellW / 2;
-    const y = innerY + labelHeight + row * (cellH + gapY) + cellH / 2;
+    const rowTop = innerY + headerLabelHeight + row * (rowTotalHeight + gapY);
+    const y = rowTop + cellH / 2;
 
-    // Anneau de fond
-    draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, '#111827');
+    draw.drawCircle(x, y, circleRadius, ringWidth, '#1e293b');
 
-    let showSteps = false;
-    if (steps !== null) {
-      const hasDailyGoal = data.goal !== null && data.goal > 0;
-      const weeklyGoalValid = data.weeklyGoal !== null && data.weeklyGoal > 0;
+    const isGoldWeek = weeklySucceeded[row] && weekAllDailySucceeded[row];
 
-      // Calcul de la semaine (lun..dim) contenant ce jour, et de son total
-      // row = index de la semaine dans la grille (0 = première semaine affichée)
-      const startDayNumOfWeek = 1 - (firstWeekDay - 1) + row * 7; // peut être <= 0
-      const endDayNumOfWeek = startDayNumOfWeek + 6;
-
-      let weekTotal = 0;
-      for (let d = startDayNumOfWeek; d <= endDayNumOfWeek; d++) {
-        if (d < 1 || d > daysInMonth) continue;
-        const v = data.days[d - 1];
-        if (v !== null) weekTotal += v;
-      }
-
-      const weeklySucceeded = weeklyGoalValid && weekTotal >= (data.weeklyGoal as number);
-
+    if (day.steps !== null) {
       let topColor: string;
       let bottomColor: string;
 
       if (!hasDailyGoal) {
-        // Pas d'objectif journalier
         if (!weeklyGoalValid) {
-          // Pas d'objectif jour ni hebdo => bleu
           topColor = '#60a5fa';
           bottomColor = '#c084fc';
-        } else if (weeklySucceeded) {
-          // Objectif hebdo présent et semaine réussie => jaune
+        } else if (isGoldWeek) {
           topColor = '#eab308';
           bottomColor = '#f1dd89';
         } else {
-          // Objectif hebdo présent mais semaine échouée => bleu
           topColor = '#60a5fa';
           bottomColor = '#c084fc';
         }
       } else {
-        // Objectif journalier présent
-        if (steps >= (data.goal as number)) {
-          // jour réussi
-          if (weeklyGoalValid && weeklySucceeded) {
-            // si hebdo présent et semaine réussie => jaune
+        if (day.steps >= (data.goal as number)) {
+          if (isGoldWeek) {
             topColor = '#eab308';
             bottomColor = '#f1dd89';
           } else {
-            // sinon vert
             topColor = '#22c55e';
             bottomColor = '#84cc16';
           }
         } else {
-          // jour non atteint => bleu
           topColor = '#60a5fa';
           bottomColor = '#c084fc';
         }
       }
 
-      const grad = draw.createLinearGradient(x - maxRadius, y, x + maxRadius, y, topColor, bottomColor);
-      draw.drawCircle(x, y, maxRadius * 0.8, ringWidth, grad);
-      showSteps = true;
+      const grad = draw.createLinearGradient(x - circleRadius, y, x + circleRadius, y, topColor, bottomColor);
+
+      if (hasDailyGoal) {
+        const ratio = Math.min(1, day.steps / (data.goal as number));
+        if (ratio >= 1) {
+          draw.drawCircle(x, y, circleRadius, ringWidth, grad);
+        } else {
+          draw.drawArc(x, y, circleRadius, ringWidth, grad, -0.25, -0.25 + ratio);
+        }
+      } else {
+        draw.drawCircle(x, y, circleRadius, ringWidth, grad);
+      }
+
+      const textColor = day.isCurrentMonth ? '#ffffff' : '#94a3b8';
+      draw.text(`${day.dayNum}`, x, y - 8, textColor, 10);
+      draw.text(`${day.steps}`, x, y + 8, textColor, 12);
     } else {
-      // Pas de données: anneau gris déjà là, pas de texte
+      const labelColor = day.isCurrentMonth ? '#64748b' : '#475569';
+      draw.text(`${day.dayNum}`, x, y, labelColor, 10);
+    }
+  }
+
+  const barRadius = barHeight / 2;
+  const weeklyTotalFontSize = 14;
+  const weeklyTotalGap = 8;
+  const weeklyTotalWidth = 54;
+  const barW = innerW - weeklyTotalWidth - weeklyTotalGap;
+  for (let row = 0; row < rows; row++) {
+    const rowTop = innerY + headerLabelHeight + row * (rowTotalHeight + gapY);
+    const barY = rowTop + cellH + barGap;
+    const barX = innerX;
+
+    draw.roundedRectFill(barX, barY, barW, barHeight, barRadius, '#1e293b');
+
+    const isGoldWeek = weeklySucceeded[row] && weekAllDailySucceeded[row];
+
+    let topColor: string;
+    let bottomColor: string;
+    if (isGoldWeek) {
+      topColor = '#eab308';
+      bottomColor = '#f1dd89';
+    } else if (weeklySucceeded[row] || weekAllDailySucceeded[row]) {
+      topColor = '#22c55e';
+      bottomColor = '#84cc16';
+    } else {
+      topColor = '#60a5fa';
+      bottomColor = '#c084fc';
     }
 
-    // Texte des pas (valeur complète) si présent
-    if (showSteps) {
-      const val = steps as number;
-      draw.text(`${val}`, x, y, '#ffffff', 14);
+    if (weeklyGoalValid) {
+      const ratio = Math.min(1, weekTotals[row] / (data.weeklyGoal as number));
+      const fillWidth = barHeight + Math.round((barW - barHeight) * ratio);
+      if (fillWidth > 0 && weekTotals[row] > 0) {
+        const g = draw.createLinearGradient(barX, barY, barX + barW, barY, topColor, bottomColor);
+        draw.roundedRectFill(barX, barY, fillWidth, barHeight, barRadius, g);
+      }
+    } else if (weekTotals[row] > 0) {
+      const g = draw.createLinearGradient(barX, barY, barX + barW, barY, topColor, bottomColor);
+      draw.roundedRectFill(barX, barY, barW, barHeight, barRadius, g);
     }
 
-    // Label du numéro du jour
-    const labelY = y + maxRadius * 0.8 + 14;
-    draw.text(`${dayNum}`, x, labelY, '#64748b', 14);
+    const totalX = barX + barW + weeklyTotalGap;
+    const totalY = barY + barHeight / 2;
+    draw.text(resumeMoisLang.image.weeklyTotal(weekTotals[row]), totalX, totalY, '#cbd5e1', weeklyTotalFontSize, 'left');
   }
 
   return draw.toBuffer();

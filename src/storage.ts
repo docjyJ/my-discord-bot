@@ -284,16 +284,15 @@ export async function getDataForMonthlySummary(user: User, date: DateTime) {
   const userId = user.id;
   const firstDay = date.firstDayOfMonth();
   const daysInMonth = firstDay.daysInMonth();
+  const firstWeekDay = firstDay.weekDay();
 
-  const dates: string[] = [];
-  for (let i = 0; i < daysInMonth; i++) {
-    dates.push(firstDay.addDay(i).toDateString());
+  const prevDaysNeeded = firstWeekDay - 1;
+  const allDates: DateTime[] = [];
+  for (let i = -prevDaysNeeded; i < daysInMonth; i++) {
+    allDates.push(firstDay.addDay(i));
   }
 
-  const u = await db.getUserWithEntriesAndCount(
-    userId,
-    dates.map(d => DateTime.parse(d)).filter((d): d is DateTime => d !== null)
-  );
+  const u = await db.getUserWithEntriesAndCount(userId, allDates);
 
   const base: MonthlySummaryData = {
     date: firstDay,

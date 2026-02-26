@@ -149,7 +149,8 @@ export const resumeMois = {
   },
   image: {
     dayLetters: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-    title: (date: DateTime) => capitalizeFirst(date.monthLocalName(fr))
+    title: (date: DateTime) => capitalizeFirst(date.monthLocalName(fr)),
+    weeklyTotal: (total: number) => nbFmt.format(total)
   }
 };
 
