@@ -113,13 +113,6 @@ export default class Draw {
     this.ctx.fill();
   }
 
-  public fillCircle(x: number, y: number, radius: number, fill: string | CanvasGradient) {
-    this.ctx.fillStyle = fill;
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, radius, 0, PI_2);
-    this.ctx.fill();
-  }
-
   public drawHorizontalDashedLine(x1: number, x2: number, y: number, lineWidth: number, color: string | CanvasGradient, dash: number[] = [10, 6]) {
     this.ctx.save();
     this.ctx.strokeStyle = color;

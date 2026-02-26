@@ -17,17 +17,7 @@ export const lang = {
       `La journée est finie ! <@${userId}>, tu n'as pas encore saisi tes pas du ${date.fullLocalDate(fr)} !\nCliquez sur le bouton ci-dessous pour enregistrer.`,
     weeklySummarySendError: "Impossible d'envoyer le résumé pour",
     connected: 'Connecté',
-    weeklySummaryMessage: (userId: string, monday: DateTime) => `<@${userId}>, voici ton résumé pour la semaine du ${monday.fullLocalDate(fr)}.`,
-    monthlySummaryMessage: (userId: string, firstDay: DateTime) => {
-      const label = capitalizeFirst(firstDay.monthLocalName(fr));
-      return `<@${userId}>, voici ton résumé pour le mois de ${label}.`;
-    },
-    monthlySummarySendError: "Impossible d'envoyer le résumé mensuel pour",
-    weeklySummaryTriggered: (date: DateTime) => `Résumé hebdomadaire déclenché pour la semaine du ${date.fullLocalDate(fr)}.`,
-    monthlySummaryTriggered: (date: DateTime) => {
-      const label = capitalizeFirst(date.monthLocalName(fr));
-      return `Résumé mensuel déclenché pour le mois de ${label}.`;
-    }
+    monthlySummarySendError: "Impossible d'envoyer le résumé mensuel pour"
   },
   deploy: {
     start: 'Synchronisation complète des commandes (/)...',

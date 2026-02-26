@@ -30,7 +30,7 @@ function presentationBuildOneRun(
   name: string,
   date: DateTime,
   steps: number,
-  dayly: {
+  daily: {
     goal: number;
     streak: number;
   } | null,
@@ -43,7 +43,7 @@ function presentationBuildOneRun(
         avatarUrl: AVATAR_URL,
         date,
         steps,
-        ...(dayly ? dayly : {goal: null, streak: null}),
+        ...(daily ? daily : {goal: null, streak: null}),
         ...(weekly
           ? weekly
           : {
