@@ -74,7 +74,7 @@ async function sendDailyPrompts(now: DateTime) {
   if (notFilled.length === 0) return;
   const channelFetched = await client.channels.fetch(channelId);
   console.log(lang.scheduler.reminderChannel, channelFetched?.id);
-  if (!channelFetched || !channelFetched.isTextBased()) return;
+  if (!channelFetched?.isTextBased()) return;
   const textChannel = channelFetched as TextChannel;
   await textChannel.send({
     content: notFilled.length > 1 ? lang.scheduler.dailyPromptMessage(notFilled, now) : lang.scheduler.dailyPromptMessageSingle(notFilled[0], now),
