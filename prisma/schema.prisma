@@ -2,7 +2,8 @@
 // Modèles: User, StepEntry, Meta (clé-valeur pour les métadonnées + drapeau de migration)
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated"
 }
 
 datasource db {

@@ -1,6 +1,7 @@
-import 'dotenv/config';
-import {PrismaClient} from '@prisma/client';
+import {PrismaBetterSqlite3} from '@prisma/adapter-better-sqlite3';
 import DateTime from '../date-time';
+import {PrismaClient} from '../generated/client';
+import {databaseUrl} from '../secrets';
 
 function required(name: string): string {
   const v = process.env[name];
@@ -15,7 +16,7 @@ const minEntry = 7000;
 const maxEntry = 17000;
 const emptyGoal = 0.1;
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({adapter: new PrismaBetterSqlite3({url: databaseUrl})});
 
 async function main() {
   await prisma.user.upsert({

@@ -1,14 +1,16 @@
-import {PrismaClient} from '@prisma/client';
+import {PrismaBetterSqlite3} from '@prisma/adapter-better-sqlite3';
 import type {User} from 'discord.js';
 import DateTime from './date-time';
+import {PrismaClient} from './generated/client';
 import type {MonthlySummaryData} from './image/monthly-summary';
 import type {WeeklySummaryData} from './image/weekly-summary';
+import {databaseUrl} from './secrets';
 
 class DataBase {
   private prisma: PrismaClient;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = new PrismaClient({adapter: new PrismaBetterSqlite3({url: databaseUrl})});
   }
 
   private async getMeta(key: string) {

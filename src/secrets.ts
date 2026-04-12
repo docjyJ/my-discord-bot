@@ -10,3 +10,4 @@ export const token = required('TOKEN');
 export const guildId = required('GUILD_ID');
 export const applicationId = required('APPLICATION_ID');
 export const channelId = required('CHANNEL_ID');
+export const databaseUrl = required('DATABASE_URL');

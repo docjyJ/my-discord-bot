@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2024",
-    "module": "commonjs",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "removeComments": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,

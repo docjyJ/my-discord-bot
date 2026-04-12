@@ -2,9 +2,11 @@
 /dist
 
 /node_modules
+/src/generated
 
 .vscode/*
 .idea/*
 .env
 data/
 dev.db
+rendered/
