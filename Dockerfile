@@ -1,4 +1,4 @@
-FROM node:24.14.1-alpine3.23@sha256:5bc53106902596d90fb497746b74ea40e0625c1c8327681d6bff3ee6ad42a22b
+FROM node:24.14.1-alpine3.23
 WORKDIR /app
 COPY . /app
 ENV NODE_ENV=production
