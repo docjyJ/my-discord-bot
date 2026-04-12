@@ -1,6 +1,6 @@
 import {type Canvas, createCanvas, GlobalFonts, type Image, loadImage, type SKRSContext2D} from '@napi-rs/canvas';
 
-GlobalFonts.registerFromPath('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVuSans');
+GlobalFonts.registerFromPath('/app/font/DejaVuSans.ttf', 'DejaVuSans');
 
 const PI_2 = Math.PI * 2;
 
