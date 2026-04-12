@@ -19,17 +19,17 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.97",
-    "@prisma/client": "^6.16.2",
-    "discord.js": "^14.22.1",
-    "dotenv": "^17.2.3",
-    "prisma": "^6.16.2"
+    "@prisma/client": "^6.19.3",
+    "discord.js": "^14.26.2",
+    "dotenv": "^17.4.1",
+    "prisma": "^6.19.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.1",
-    "@types/node": "^20.19.14",
+    "@biomejs/biome": "^2.4.11",
+    "@types/node": "^20.19.39",
     "tsup": "^8.5.1",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "private": true
 }
