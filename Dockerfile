@@ -1,16 +1,12 @@
-FROM node:24-bookworm-slim AS base
+FROM node:24.14.1-alpine3.23@sha256:5bc53106902596d90fb497746b74ea40e0625c1c8327681d6bff3ee6ad42a22b
 WORKDIR /app
 COPY . /app
 ENV NODE_ENV=production
 ENV CI=true
 
-# Install fonts for canvas text rendering (Noto)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    fonts-dejavu-core \
-  && rm -rf /var/lib/apt/lists/*
+RUN npm install -g pnpm@9 && \
+    pnpm install --frozen-lockfile --prod=false && \
+    DATABASE_URL="file:/db/database.db" pnpm prisma:generate && \
+    pnpm build
 
-RUN corepack enable
-RUN pnpm install --frozen-lockfile
-RUN pnpm prisma:generate
-RUN pnpm build
 CMD ["pnpm", "start"]
