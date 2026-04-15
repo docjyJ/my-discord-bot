@@ -28,7 +28,7 @@
     "prisma": "^7.7.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.11",
+    "@biomejs/biome": "^2.4.12",
     "@types/node": "^24.12.2",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
