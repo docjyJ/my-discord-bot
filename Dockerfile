@@ -1,4 +1,4 @@
-FROM node:24.14.1-alpine3.23
+FROM node:26.1.0-alpine3.23
 WORKDIR /app
 COPY . /app
 ENV NODE_ENV=production
